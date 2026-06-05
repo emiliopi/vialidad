@@ -1,0 +1,184 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #101c4e;
+  --color-primary-light: #1a2C7a;
+  --color-primary-dark: #0a1233;
+  --color-accent: #6366f1;
+  --animate-slide-in: slide-in 0.3s ease-out;
+  --animate-shake: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@keyframes shake {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+  40%, 60% { transform: translate3d(4px, 0, 0); }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900;
+  }
+  
+  .dark body {
+    @apply bg-slate-950 text-slate-100;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #1e293b;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+input[type="date"],
+input[type="time"] {
+  color-scheme: light dark;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  cursor: pointer;
+}
+
+.rdp-custom {
+  --rdp-accent-color: var(--color-primary);
+  --rdp-background-color: var(--color-accent);
+}
+
+.rdp-custom .rdp-root {
+  --rdp-months-gap: 0;
+  --rdp-day-width: 2.5rem;
+  --rdp-day-height: 2.5rem;
+  --rdp-caption-height: auto;
+}
+
+.rdp-custom .rdp-caption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.rdp-custom .rdp-caption_button {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+.rdp-custom .rdp-caption_button:hover {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.rdp-custom .rdp-grid {
+  gap: 0.25rem;
+}
+
+.rdp-custom .rdp-head_cell {
+  font-weight: 500;
+  color: #64748b;
+  font-size: 0.75rem;
+  text-transform: capitalize;
+}
+
+.rdp-custom .rdp-cell {
+  padding: 0;
+}
+
+.rdp-custom .rdp-button {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+}
+
+.rdp-custom .rdp-button:hover:not([disabled]) {
+  background-color: #e2e8f0;
+  color: var(--color-primary);
+}
+
+.rdp-custom .rdp-button_selected {
+  background-color: var(--color-primary) !important;
+  color: white !important;
+}
+
+.rdp-custom .rdp-button_today:not(.rdp-button_selected) {
+  border: 2px solid var(--color-primary);
+  color: var(--color-primary);
+}
+
+.rdp-custom .rdp-button_disabled {
+  color: #cbd5e1;
+  cursor: not-allowed;
+}
+
+@media print {
+  body { background: white !important; color: black !important; }
+  .dark body { background: white !important; color: black !important; }
+  nav, header, footer, .no-print, button, .hidden-print { display: none !important; }
+  .print-only { display: block !important; }
+  .print-table { width: 100%; font-size: 10px; }
+  .print-table th { background: #0056a6 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .print-table td, .print-table th { border: 1px solid black !important; }
+}

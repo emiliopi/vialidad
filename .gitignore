@@ -1,0 +1,60 @@
+# Dependency directories
+node_modules/
+backend/venv/
+backend/.venv/
+env/
+.env/
+
+# Python cache and temporary files
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Environment variables & local secrets
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Frontend build outputs
+frontend/dist/
+frontend/build/
+
+# Local databases / developer-specific logs
+*.log
+*.sqlite
+*.sqlite3
