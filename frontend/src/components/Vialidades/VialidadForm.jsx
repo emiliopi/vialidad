@@ -1,4 +1,5 @@
 import React from 'react';
+import { Input, Checkbox } from '../Common';
 
 export const VialidadForm = ({ data, onChange }) => {
   const handleChange = (key, value) => {
@@ -12,71 +13,42 @@ export const VialidadForm = ({ data, onChange }) => {
       </h3>
       
       <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-            Número de Recibo *
-          </label>
-          <input
-            type="text"
-            value={data.numeroRecibo || ''}
-            onChange={(e) => handleChange('numeroRecibo', e.target.value)}
-            className="w-full px-4 py-2.5 rounded-xl border-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-all border-slate-200 dark:border-slate-700 focus:border-primary focus:outline-none"
-            placeholder="Ej. 178513"
-            required
-          />
-        </div>
+        <Input
+          label="Número de Recibo *"
+          value={data.numeroRecibo || ''}
+          onChange={(e) => handleChange('numeroRecibo', e.target.value)}
+          placeholder="Ej. 178513"
+          required
+        />
 
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-            Municipio / Distrito (Opcional)
-          </label>
-          <input
-            type="text"
-            value={data.distrito || ''}
-            onChange={(e) => handleChange('distrito', e.target.value)}
-            className="w-full px-4 py-2.5 rounded-xl border-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-all border-slate-200 dark:border-slate-700 focus:border-primary focus:outline-none"
-            placeholder="Ej. San Salvador"
-          />
-        </div>
+        <Input
+          label="Municipio / Distrito (Opcional)"
+          value={data.distrito || ''}
+          onChange={(e) => handleChange('distrito', e.target.value)}
+          placeholder="Ej. San Salvador"
+        />
 
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-            Contribuyente *
-          </label>
-          <input
-            type="text"
-            value={data.solicitante}
-            onChange={(e) => handleChange('solicitante', e.target.value)}
-            className="w-full px-4 py-2.5 rounded-xl border-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-all border-slate-200 dark:border-slate-700 focus:border-primary focus:outline-none"
-            placeholder="Ej. Juan Pérez"
-          />
-        </div>
+        <Input
+          label="Contribuyente *"
+          value={data.solicitante || ''}
+          onChange={(e) => handleChange('solicitante', e.target.value)}
+          placeholder="Ej. Juan Pérez"
+          required
+        />
 
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-            Concepto
-          </label>
-          <input
-            type="text"
-            value={data.concepto}
-            onChange={(e) => handleChange('concepto', e.target.value)}
-            className="w-full px-4 py-2.5 rounded-xl border-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-all border-slate-200 dark:border-slate-700 focus:border-primary focus:outline-none"
-            placeholder="Ej. Acceso Vial"
-          />
-        </div>
+        <Input
+          label="Concepto"
+          value={data.concepto || ''}
+          onChange={(e) => handleChange('concepto', e.target.value)}
+          placeholder="Ej. Acceso Vial"
+        />
 
-        <div className="flex items-center gap-2 pt-2">
-          <input
-            type="checkbox"
-            id="conMarcaAgua"
-            checked={data.conMarcaAgua ?? true}
-            onChange={(e) => handleChange('conMarcaAgua', e.target.checked)}
-            className="w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500 focus:outline-none cursor-pointer"
-          />
-          <label htmlFor="conMarcaAgua" className="text-sm font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
-            Incluir Marca de Agua en Impresión
-          </label>
-        </div>
+        <Checkbox
+          checked={data.conMarcaAgua ?? true}
+          onChange={(e) => handleChange('conMarcaAgua', e.target.checked)}
+          label="Incluir Marca de Agua en Impresión"
+          className="pt-2"
+        />
       </div>
     </div>
   );
