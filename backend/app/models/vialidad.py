@@ -1,0 +1,40 @@
+from datetime import datetime, timezone
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, Boolean
+from sqlalchemy.orm import Mapped, mapped_column
+from app.core.database import Base
+
+class Vialidad(Base):
+    """
+    Modelo de base de datos que mapea la tabla VIALIDADES de SQL Server.
+    """
+    __tablename__ = "VIALIDADES"
+
+    codigo_vialidad: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    llave_unica: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
+    numero_recibo: Mapped[str] = mapped_column(String(50), index=True, nullable=False)
+    nombre: Mapped[str] = mapped_column(String(255), nullable=False)
+    distrito: Mapped[str] = mapped_column(String(255), nullable=True)
+    concepto: Mapped[str] = mapped_column(String(255), nullable=False)
+    fecha_emision: Mapped[str] = mapped_column(String(50), nullable=False)
+    fecha_expiracion: Mapped[str] = mapped_column(String(50), nullable=False)
+    con_marca_agua: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    max_visualizaciones: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
+    visualizaciones_restantes: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
+
+    # Campos de Auditoría
+    codigo_usuario_creacion: Mapped[int] = mapped_column(BigInteger, ForeignKey("USUARIOS.codigo_usuario"), nullable=False)
+    fecha_creacion: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        nullable=False
+    )
+    codigo_usuario_modificacion: Mapped[int] = mapped_column(BigInteger, ForeignKey("USUARIOS.codigo_usuario"), nullable=True)
+    fecha_modificacion: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        nullable=False
+    )
+
+    def __repr__(self) -> str:
+        return f"<Vialidad codigo_vialidad={self.codigo_vialidad} llave_unica={self.llave_unica} numero_recibo={self.numero_recibo}>"

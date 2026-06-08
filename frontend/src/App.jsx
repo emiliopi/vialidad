@@ -9,6 +9,7 @@ import Catalog from './pages/Catalog';
 import DevGuide from './pages/DevGuide';
 import Usuarios from './pages/Usuarios';
 import Vialidades from './pages/Vialidades';
+import VerificarVialidad from './pages/VerificarVialidad';
 
 
 // Componente para proteger rutas públicas de usuarios ya autenticados
@@ -33,6 +34,8 @@ function App() {
           {/* Rutas Públicas */}
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+          <Route path="/verificar/:llave" element={<VerificarVialidad />} />
+          <Route path="/verificar" element={<VerificarVialidad />} />
           
           {/* Rutas Protegidas de Autenticación */}
           <Route element={<ProtectedRoute />}>

@@ -43,6 +43,16 @@ export const VialidadForm = ({ data, onChange }) => {
           placeholder="Ej. Acceso Vial"
         />
 
+        <Input
+          label="Límite de Visualizaciones *"
+          type="number"
+          value={data.max_visualizaciones !== undefined ? data.max_visualizaciones : 5}
+          onChange={(e) => handleChange('max_visualizaciones', e.target.value === '' ? '' : parseInt(e.target.value))}
+          placeholder="Ej. 5"
+          min="1"
+          required
+        />
+
         <Checkbox
           checked={data.conMarcaAgua ?? true}
           onChange={(e) => handleChange('conMarcaAgua', e.target.checked)}

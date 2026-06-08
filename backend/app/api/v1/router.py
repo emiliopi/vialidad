@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, utils, users
+from app.api.v1.endpoints import auth, utils, users, vialidades
 
 api_router = APIRouter()
 
@@ -11,4 +11,7 @@ api_router.include_router(utils.router, prefix="/utils", tags=["Utilidades"])
 
 # Incluimos los endpoints de gestión de usuarios bajo el prefijo /users
 api_router.include_router(users.router, prefix="/users", tags=["Usuarios"])
+
+# Incluimos los endpoints de vialidades bajo el prefijo /vialidades
+api_router.include_router(vialidades.router, prefix="/vialidades", tags=["Vialidades"])
 

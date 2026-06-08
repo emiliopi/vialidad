@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { toast } from 'react-hot-toast';
 import DashboardLayout from '../components/Layout/DashboardLayout';
 import { Button } from '../components/Common';
 import { VialidadForm } from '../components/Vialidades/VialidadForm';
 import { VialidadDocument } from '../components/Vialidades/VialidadDocument';
 import { getVialidadPrintTemplate } from '../utils/VialidadPrintTemplate';
+import { vialidadService } from '../api/vialidadService';
 
 export const Vialidades = () => {
   const [data, setData] = useState({
@@ -12,6 +14,7 @@ export const Vialidades = () => {
     solicitante: '',
     concepto: 'EMPLEADO',
     conMarcaAgua: true,
+    max_visualizaciones: 5,
     ubicacion: '',
     autorizador: 'Ing. Carlos Mendoza (Director de Vialidad)',
     fecha: new Date().toLocaleDateString('es-ES', {
@@ -28,50 +31,76 @@ export const Vialidades = () => {
     return `VIA-${currentYear}-${randomNum}`;
   });
 
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://vialidad.gob.sv/verificar/${llave}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+    window.location.origin + '/verificar/' + llave + '?recibo=' + data.numeroRecibo
+  )}`;
 
   const [isPrinting, setIsPrinting] = useState(false);
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (isPrinting) return;
     setIsPrinting(true);
 
-    // Crear un iframe invisible
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
+    const loadToast = toast.loading('Registrando documento en base de datos...');
+    try {
+      const payload = {
+        llave_unica: llave,
+        numero_recibo: data.numeroRecibo,
+        nombre: data.solicitante,
+        distrito: data.distrito || null,
+        concepto: data.concepto,
+        fecha_emision: data.fecha,
+        fecha_expiracion: `31 de diciembre de ${new Date().getFullYear()}`,
+        con_marca_agua: data.conMarcaAgua ?? true,
+        max_visualizaciones: data.max_visualizaciones !== undefined ? data.max_visualizaciones : 5
+      };
 
-    // Obtener el HTML con los estilos aplicados
-    const htmlContent = getVialidadPrintTemplate(data, llave, qrUrl, data.conMarcaAgua);
-    
-    // Escribir el HTML al documento del iframe
-    const doc = iframe.contentDocument || iframe.contentWindow.document;
-    doc.open();
-    doc.write(htmlContent);
-    doc.close();
+      await vialidadService.createVialidad(payload);
+      toast.success('¡Documento registrado y listo para imprimir!', { id: loadToast });
 
-    // Pequeño delay de 1.5 segundos para garantizar que carguen los estilos CDN y el logo
-    setTimeout(() => {
-      try {
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-      } catch (err) {
-        console.error("Error al imprimir:", err);
-      } finally {
-        if (document.body.contains(iframe)) {
-          document.body.removeChild(iframe);
+      // Crear un iframe invisible
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+
+      // Obtener el HTML con los estilos aplicados
+      const htmlContent = getVialidadPrintTemplate(data, llave, qrUrl, data.conMarcaAgua);
+      
+      // Escribir el HTML al documento del iframe
+      const doc = iframe.contentDocument || iframe.contentWindow.document;
+      doc.open();
+      doc.write(htmlContent);
+      doc.close();
+
+      // Pequeño delay de 1.5 segundos para garantizar que carguen los estilos CDN y el logo
+      setTimeout(() => {
+        try {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        } catch (err) {
+          console.error("Error al imprimir:", err);
+        } finally {
+          if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+          }
+          setIsPrinting(false);
         }
-        setIsPrinting(false);
-      }
-    }, 1500);
+      }, 1500);
+
+    } catch (err) {
+      console.error(err);
+      const errMsg = err.response?.data?.detail || err.response?.data?.error || 'Error al registrar el documento.';
+      toast.error(errMsg, { id: loadToast });
+      setIsPrinting(false);
+    }
   };
 
-  const isInvalid = !data.solicitante?.trim() || !data.concepto?.trim() || !data.numeroRecibo?.trim();
+  const isInvalid = !data.solicitante?.trim() || !data.concepto?.trim() || !data.numeroRecibo?.trim() || !String(data.max_visualizaciones || '').trim();
 
   return (
     <DashboardLayout>
