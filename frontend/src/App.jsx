@@ -8,6 +8,8 @@ import Dashboard from './pages/Dashboard';
 import Catalog from './pages/Catalog';
 import DevGuide from './pages/DevGuide';
 import Usuarios from './pages/Usuarios';
+import Vialidades from './pages/Vialidades';
+
 
 // Componente para proteger rutas públicas de usuarios ya autenticados
 const PublicRoute = ({ children }) => {
@@ -38,6 +40,7 @@ function App() {
             <Route path="/catalog" element={<Catalog />} />
             <Route path="/dev-guide" element={<DevGuide />} />
             <Route path="/usuarios" element={<Usuarios />} />
+            <Route path="/vialidades" element={<Vialidades />} />
           </Route>
 
           {/* Redirecciones por Defecto */}

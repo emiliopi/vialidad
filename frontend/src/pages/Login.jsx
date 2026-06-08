@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Button, Input } from '../components/Common';
+import { APP_CONFIG } from '../config/constants';
 
 const Login = () => {
   const { register, handleSubmit, formState: { errors } } = useForm({
@@ -96,7 +97,7 @@ const Login = () => {
               className="h-28 mx-auto mb-4 object-contain" 
             />
             <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-display">
-              Título
+              {APP_CONFIG.name}
             </h1>
             <p className="text-slate-500 mt-2 text-sm md:text-base">Ingresa tus credenciales</p>
           </div>
