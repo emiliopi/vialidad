@@ -44,6 +44,16 @@ api.interceptors.response.use(
 
     // Si recibimos 401 (No autorizado) y la petición no ha sido reintentada previamente
     if (error.response?.status === 401 && !originalRequest._retry) {
+      const currentToken = localStorage.getItem('token');
+      const requestToken = originalRequest.headers.Authorization?.replace('Bearer ', '');
+
+      // Si el token en localStorage ya cambió, significa que otra petición en paralelo
+      // ya refrescó el token. Reintentamos directamente con el nuevo token sin refrescar de nuevo.
+      if (currentToken && requestToken && currentToken !== requestToken) {
+        originalRequest.headers.Authorization = `Bearer ${currentToken}`;
+        return api(originalRequest);
+      }
+
       // Si ya hay un refresco en curso, encolar la petición y esperar
       if (isRefreshing) {
         return new Promise((resolve, reject) => {

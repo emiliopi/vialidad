@@ -14,6 +14,20 @@ export const VialidadForm = ({ data, onChange }) => {
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            Número de Recibo *
+          </label>
+          <input
+            type="text"
+            value={data.numeroRecibo || ''}
+            onChange={(e) => handleChange('numeroRecibo', e.target.value)}
+            className="w-full px-4 py-2.5 rounded-xl border-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-all border-slate-200 dark:border-slate-700 focus:border-primary focus:outline-none"
+            placeholder="Ej. 178513"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
             Municipio / Distrito (Opcional)
           </label>
           <input
@@ -49,6 +63,19 @@ export const VialidadForm = ({ data, onChange }) => {
             className="w-full px-4 py-2.5 rounded-xl border-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-all border-slate-200 dark:border-slate-700 focus:border-primary focus:outline-none"
             placeholder="Ej. Acceso Vial"
           />
+        </div>
+
+        <div className="flex items-center gap-2 pt-2">
+          <input
+            type="checkbox"
+            id="conMarcaAgua"
+            checked={data.conMarcaAgua ?? true}
+            onChange={(e) => handleChange('conMarcaAgua', e.target.checked)}
+            className="w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500 focus:outline-none cursor-pointer"
+          />
+          <label htmlFor="conMarcaAgua" className="text-sm font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+            Incluir Marca de Agua en Impresión
+          </label>
         </div>
       </div>
     </div>

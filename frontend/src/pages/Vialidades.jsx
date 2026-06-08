@@ -3,12 +3,15 @@ import DashboardLayout from '../components/Layout/DashboardLayout';
 import { Button } from '../components/Common';
 import { VialidadForm } from '../components/Vialidades/VialidadForm';
 import { VialidadDocument } from '../components/Vialidades/VialidadDocument';
+import { getVialidadPrintTemplate } from '../utils/VialidadPrintTemplate';
 
 export const Vialidades = () => {
   const [data, setData] = useState({
+    numeroRecibo: '178513',
     distrito: '',
     solicitante: '',
     concepto: 'EMPLEADO',
+    conMarcaAgua: true,
     ubicacion: '',
     autorizador: 'Ing. Carlos Mendoza (Director de Vialidad)',
     fecha: new Date().toLocaleDateString('es-ES', {
@@ -18,11 +21,57 @@ export const Vialidades = () => {
     })
   });
 
+  // Generar llave única estable para el documento
+  const [llave] = useState(() => {
+    const randomNum = Math.floor(100000 + Math.random() * 900000);
+    const currentYear = new Date().getFullYear();
+    return `VIA-${currentYear}-${randomNum}`;
+  });
+
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://vialidad.gob.sv/verificar/${llave}`;
+
+  const [isPrinting, setIsPrinting] = useState(false);
+
   const handlePrint = () => {
-    window.print();
+    if (isPrinting) return;
+    setIsPrinting(true);
+
+    // Crear un iframe invisible
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    // Obtener el HTML con los estilos aplicados
+    const htmlContent = getVialidadPrintTemplate(data, llave, qrUrl, data.conMarcaAgua);
+    
+    // Escribir el HTML al documento del iframe
+    const doc = iframe.contentDocument || iframe.contentWindow.document;
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+
+    // Pequeño delay de 1.5 segundos para garantizar que carguen los estilos CDN y el logo
+    setTimeout(() => {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch (err) {
+        console.error("Error al imprimir:", err);
+      } finally {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+        setIsPrinting(false);
+      }
+    }, 1500);
   };
 
-  const isInvalid = !data.solicitante?.trim() || !data.concepto?.trim();
+  const isInvalid = !data.solicitante?.trim() || !data.concepto?.trim() || !data.numeroRecibo?.trim();
 
   return (
     <DashboardLayout>
@@ -39,48 +88,15 @@ export const Vialidades = () => {
             </p>
           </div>
           <div>
-            <Button variant="primary" onClick={handlePrint} disabled={isInvalid} className="flex items-center gap-2 shadow-lg">
+            <Button variant="primary" onClick={handlePrint} disabled={isInvalid || isPrinting} className="flex items-center gap-2 shadow-lg">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.82l2.9-2.9m0 0l2.9 2.9m-2.9-2.9v6c0 1.1.9 2 2 2h2m4-14a2 2 0 012 2v6a2 2 0 01-2 2h-2m-4-8a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h10.5a1.5 1.5 0 011.5 1.5v12a1.5 1.5 0 01-1.5 1.5H6.75A1.5 1.5 0 015.25 20.25V8.25a1.5 1.5 0 011.5-1.5z" />
               </svg>
-              Imprimir Documento
+              {isPrinting ? 'Preparando...' : 'Imprimir Documento'}
             </Button>
           </div>
         </div>
-
-        {/* Estilos específicos para impresión limpia de la hoja de papel bond */}
-        <style dangerouslySetInnerHTML={{__html: `
-          @media print {
-            body {
-              background: white !important;
-              color: black !important;
-            }
-            /* Ocultar todo el layout del dashboard y controles */
-            aside, header, .print\\:hidden, button, input, label, select, textarea {
-              display: none !important;
-            }
-            /* Resetear márgenes y paddings del contenedor principal */
-            .lg\\:pl-64, main, .max-w-7xl, .grid {
-              padding: 0 !important;
-              margin: 0 !important;
-              display: block !important;
-              width: 100% !important;
-            }
-            /* Estilo único del área de impresión */
-            #print-area {
-              box-shadow: none !important;
-              border: none !important;
-              width: 100% !important;
-              max-width: 100% !important;
-              margin: 0 !important;
-              padding: 2cm !important;
-              min-height: auto !important;
-              display: block !important;
-              position: static !important;
-            }
-          }
-        `}} />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
@@ -90,7 +106,7 @@ export const Vialidades = () => {
           </div>
 
           {/* Área de Previsualización (Derecha) */}
-          <VialidadDocument data={data} />
+          <VialidadDocument data={data} llave={llave} qrUrl={qrUrl} />
 
         </div>
 
