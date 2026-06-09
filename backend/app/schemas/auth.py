@@ -26,11 +26,20 @@ class RegisterRequest(BaseModel):
             raise ValueError("La contraseña debe contener al menos un número.")
         return value
 
+class MenuResponse(BaseModel):
+    label: str = Field(..., description="Nombre visible del menú")
+    path: str = Field(..., description="Ruta de navegación asociada")
+    icon: str = Field(..., description="Icono SVG o clase del menú")
+
+    class Config:
+        from_attributes = True
+
 class UserResponse(BaseModel):
     id: str = Field(..., description="Código único del usuario (serializado como string para evitar overflow de BigInt)")
     username: str
     email: str
     role: str = Field(..., description="Nombre del rol del usuario")
+    menus: list[MenuResponse] = Field(default=[], description="Lista de menús autorizados para el rol")
 
     class Config:
         from_attributes = True

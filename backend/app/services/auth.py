@@ -72,6 +72,44 @@ class AuthService:
         
         db.commit()
 
+        # 3. Sembrar Menús por defecto
+        from app.models.menu import Menu
+        default_menus = [
+            {"label": "Inicio", "path": "/dashboard", "icon": "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"},
+            {"label": "Catálogo", "path": "/catalog", "icon": "M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"},
+            {"label": "Guía Dev", "path": "/dev-guide", "icon": "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"},
+            {"label": "Vialidades", "path": "/vialidades", "icon": "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"},
+            {"label": "Configuración", "path": "/configuracion", "icon": "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"},
+            {"label": "Usuarios", "path": "/usuarios", "icon": "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0"},
+            {"label": "Permisos", "path": "/permisos", "icon": "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"}
+        ]
+
+        db_menus = []
+        for menu_info in default_menus:
+            menu_obj = db.scalar(select(Menu).where(Menu.path == menu_info["path"]))
+            if not menu_obj:
+                menu_obj = Menu(label=menu_info["label"], path=menu_info["path"], icon=menu_info["icon"])
+                db.add(menu_obj)
+                db.flush()
+            else:
+                menu_obj.icon = menu_info["icon"]
+                menu_obj.label = menu_info["label"]
+            db_menus.append(menu_obj)
+        db.commit()
+
+        # 4. Asignar menús a Roles
+        # Super Admin (ID 1) tiene todos los menús
+        super_admin_role = db.get(Role, 1)
+        if super_admin_role:
+            super_admin_role.menus = db_menus
+        
+        # Admin (ID 2) tiene acceso a un subset (excluyendo Usuarios y Permisos)
+        admin_role = db.get(Role, 2)
+        if admin_role:
+            admin_role.menus = [m for m in db_menus if m.path not in ["/usuarios", "/permisos"]]
+        
+        db.commit()
+
     @staticmethod
     def get_role_name_by_id(db: Session, codigo_rol: int) -> str:
         """
@@ -142,6 +180,12 @@ class AuthService:
         user.ultimo_intento_login = None
         db.commit()
 
+        # Consultar menús permitidos para el rol
+        user_menus = [
+            {"label": m.label, "path": m.path, "icon": m.icon}
+            for m in user.rol.menus
+        ]
+
         return {
             "access_token": access_token,
             "refresh_token": refresh_token,
@@ -150,7 +194,8 @@ class AuthService:
                 "id": str(user.codigo_usuario),
                 "username": user.usuario,
                 "email": user.email,
-                "role": role_name
+                "role": role_name,
+                "menus": user_menus
             }
         }
 

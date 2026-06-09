@@ -122,9 +122,14 @@ def get_me(current_user: User = Depends(get_current_user), db: Session = Depends
     Obtiene los detalles del perfil del usuario actualmente autenticado.
     """
     role_name = AuthService.get_role_name_by_id(db, current_user.codigo_rol)
+    user_menus = [
+        {"label": m.label, "path": m.path, "icon": m.icon}
+        for m in current_user.rol.menus
+    ]
     return {
         "id": str(current_user.codigo_usuario),
         "username": current_user.usuario,
         "email": current_user.email,
-        "role": role_name
+        "role": role_name,
+        "menus": user_menus
     }

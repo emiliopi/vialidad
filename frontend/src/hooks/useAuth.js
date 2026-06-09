@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { login as loginApi, logout as logoutApi } from '../api/authService';
+import { useState, useEffect } from 'react';
+import { login as loginApi, logout as logoutApi, getMe } from '../api/authService';
 
 /**
  * Hook para centralizar la autenticación del usuario.
@@ -20,6 +20,22 @@ export const useAuth = () => {
     }
   });
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
+
+  // Sincronizar el perfil del usuario con la base de datos al inicializar o reconectar
+  useEffect(() => {
+    const syncProfile = async () => {
+      if (isAuthenticated) {
+        try {
+          const profile = await getMe();
+          localStorage.setItem('user', JSON.stringify(profile));
+          setUser(profile);
+        } catch (err) {
+          console.error('Error al sincronizar perfil de usuario:', err);
+        }
+      }
+    };
+    syncProfile();
+  }, [isAuthenticated]);
 
   /**
    * Procesa la solicitud de login de la API.

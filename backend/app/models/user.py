@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
+from app.models.menu import Menu, roles_menus
 
 class Role(Base):
     """
@@ -14,6 +15,13 @@ class Role(Base):
 
     # Relación de uno a muchos con usuarios
     usuarios: Mapped[list["User"]] = relationship("User", back_populates="rol", cascade="all, delete-orphan")
+
+    # Relación de muchos a muchos con menús
+    menus: Mapped[list["Menu"]] = relationship(
+        "Menu",
+        secondary=roles_menus,
+        lazy="selectin"
+    )
 
     def __repr__(self) -> str:
         return f"<Role codigo_rol={self.codigo_rol} nombre={self.nombre}>"

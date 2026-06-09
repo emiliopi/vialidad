@@ -41,8 +41,12 @@ export const Usuarios = () => {
     setLoading(true);
     try {
       const data = await userService.getUsers(page, limit, search);
-      setUsers(data.items || []);
-      setTotal(data.total || 0);
+      let list = data.items || [];
+      if (currentUser?.role !== 'Super Admin') {
+        list = list.filter(u => u.codigo_rol !== 1 && u.rol?.nombre !== 'Super Admin');
+      }
+      setUsers(list);
+      setTotal(currentUser?.role !== 'Super Admin' ? list.length : (data.total || 0));
     } catch (err) {
       console.error(err);
       toast.error('Error al cargar la lista de usuarios.');
@@ -161,8 +165,9 @@ export const Usuarios = () => {
     }
   };
 
-  // Limitar accesos (doble protección)
-  if (currentUser?.role !== 'Super Admin') {
+  // Limitar accesos (doble protección dinámica)
+  const hasAccess = currentUser?.menus?.some(m => m.path === '/usuarios') || currentUser?.role === 'Super Admin';
+  if (!hasAccess) {
     return (
       <DashboardLayout>
         <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 p-6 rounded-2xl text-center max-w-xl mx-auto my-12">
@@ -193,12 +198,14 @@ export const Usuarios = () => {
               Crea, edita, busca y administra las cuentas de usuario y sus respectivos roles en la plataforma.
             </p>
           </div>
-          <Button variant="primary" onClick={handleOpenCreateModal} className="flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            Nuevo Usuario
-          </Button>
+          {currentUser?.role === 'Super Admin' && (
+            <Button variant="primary" onClick={handleOpenCreateModal} className="flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              Nuevo Usuario
+            </Button>
+          )}
         </div>
 
         {/* Buscador Server-Side */}
@@ -246,7 +253,7 @@ export const Usuarios = () => {
                     <th className="px-6 py-4">Rol Asignado</th>
                     <th className="px-6 py-4">Intentos de Login</th>
                     <th className="px-6 py-4">Fecha Creación</th>
-                    <th className="px-6 py-4 text-right">Acciones</th>
+                    {currentUser?.role === 'Super Admin' && <th className="px-6 py-4 text-right">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -279,27 +286,29 @@ export const Usuarios = () => {
                             day: 'numeric'
                           })}
                         </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="outline" size="sm" onClick={() => handleOpenEditModal(u)} className="p-1">
-                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-4 h-4">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
-                              </svg>
-                            </Button>
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              disabled={isSelf || deleteLoading === u.codigo_usuario}
-                              loading={deleteLoading === u.codigo_usuario}
-                              onClick={() => handleDeleteUser(u.codigo_usuario, u.usuario)}
-                              className="p-1"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-4 h-4">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                              </svg>
-                            </Button>
-                          </div>
-                        </td>
+                        {currentUser?.role === 'Super Admin' && (
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button variant="outline" size="sm" onClick={() => handleOpenEditModal(u)} className="p-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-4 h-4">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
+                                </svg>
+                              </Button>
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                disabled={isSelf || deleteLoading === u.codigo_usuario}
+                                loading={deleteLoading === u.codigo_usuario}
+                                onClick={() => handleDeleteUser(u.codigo_usuario, u.usuario)}
+                                className="p-1"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-4 h-4">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                </svg>
+                              </Button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}

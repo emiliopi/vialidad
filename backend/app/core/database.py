@@ -35,6 +35,7 @@ def init_db() -> None:
         from app.models.user import User, Role
         from app.models.vialidad import Vialidad
         from app.models.configuracion import ConfiguracionVialidad
+        from app.models.menu import Menu, roles_menus
         Base.metadata.create_all(bind=engine)
         logger.info("Base de datos inicializada correctamente.")
         
