@@ -87,7 +87,7 @@ export const Permisos = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-300">
+      <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-300">
         
         {/* Encabezado */}
         <div className="border-b border-slate-200 dark:border-slate-800 pb-5">
@@ -101,7 +101,7 @@ export const Permisos = () => {
 
         {loading ? (
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 text-center space-y-4 shadow-sm">
-            <div className="w-12 h-12 border-4 border-sky-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
             <p className="text-slate-500 dark:text-slate-400 text-sm">Cargando roles y privilegios del sistema...</p>
           </div>
         ) : (
@@ -120,8 +120,8 @@ export const Permisos = () => {
                     onClick={() => handleSelectRol(rol)}
                     className={`w-full text-left px-4 py-3.5 rounded-xl font-semibold transition-all duration-300 flex items-center justify-between group ${
                       selectedRol?.codigo_rol === rol.codigo_rol
-                        ? 'bg-sky-500 text-white shadow-md shadow-sky-500/10'
-                        : 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/40 dark:hover:bg-slate-950/80 text-slate-700 dark:text-slate-300'
+                        ? 'bg-primary text-white shadow-md shadow-primary/10'
+                        : 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/40 dark:hover:bg-slate-950/80 text-slate-700 dark:text-slate-350'
                     }`}
                   >
                     <span>{rol.nombre}</span>
@@ -169,7 +169,7 @@ export const Permisos = () => {
                       onClick={() => handleToggleMenu(menu.codigo_menu)}
                       className={`p-4 rounded-xl border transition-all duration-300 flex items-center justify-between cursor-pointer select-none ${
                         isChecked
-                          ? 'border-sky-500/30 bg-sky-500/5 dark:bg-sky-500/10'
+                          ? 'border-primary/30 bg-primary/5 dark:bg-primary/10'
                           : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 hover:bg-slate-50 dark:hover:bg-slate-950/50'
                       }`}
                     >
@@ -184,7 +184,7 @@ export const Permisos = () => {
                       
                       {/* Custom Switch / Checkbox */}
                       <div className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 ${
-                        isChecked ? 'bg-sky-500' : 'bg-slate-300 dark:bg-slate-700'
+                        isChecked ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-700'
                       }`}>
                         <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
                           isChecked ? 'translate-x-5' : 'translate-x-0'

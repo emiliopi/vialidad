@@ -31,6 +31,16 @@ export const vialidadService = {
       params: { numero_recibo: numeroRecibo }
     });
     return res.data;
+  },
+
+  /**
+   * Obtiene estadísticas de las vialidades emitidas en un rango de fechas.
+   */
+  getEstadisticas: async (fechaInicio = '', fechaFin = '') => {
+    const res = await api.get('/vialidades/estadisticas', {
+      params: { fecha_inicio: fechaInicio, fecha_fin: fechaFin }
+    });
+    return res.data;
   }
 };
 

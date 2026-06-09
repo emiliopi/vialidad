@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
+from typing import Optional
 import logging
 
 from app.api import deps
@@ -53,6 +54,82 @@ def create_vialidad(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error al procesar el guardado de la vialidad."
+        )
+
+@router.get("/estadisticas")
+def get_vialidades_estadisticas(
+    fecha_inicio: Optional[str] = Query(default=None),
+    fecha_fin: Optional[str] = Query(default=None),
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """
+    Obtiene métricas estadísticas agregadas para las vialidades emitidas en un rango de fechas.
+    """
+    from datetime import datetime
+    from collections import Counter
+    
+    query = db.query(Vialidad)
+    if fecha_inicio:
+        try:
+            start_date = datetime.strptime(fecha_inicio, "%Y-%m-%d")
+            query = query.filter(Vialidad.fecha_creacion >= start_date)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Formato de fecha_inicio inválido. Use YYYY-MM-DD.")
+    if fecha_fin:
+        try:
+            end_date = datetime.strptime(fecha_fin, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+            query = query.filter(Vialidad.fecha_creacion <= end_date)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Formato de fecha_fin inválido. Use YYYY-MM-DD.")
+
+    try:
+        vialidades = query.all()
+        total_historico = db.query(Vialidad).count()
+        
+        total_periodo = len(vialidades)
+        
+        # Agregaciones en memoria
+        distritos_counter = Counter()
+        conceptos_counter = Counter()
+        timeline_counter = Counter()
+        
+        for v in vialidades:
+            distrito_name = v.distrito or "No especificado"
+            distritos_counter[distrito_name] += 1
+            
+            conceptos_counter[v.concepto] += 1
+            
+            date_str = v.fecha_creacion.strftime("%Y-%m-%d")
+            timeline_counter[date_str] += 1
+            
+        distritos = [
+            {"distrito": name, "total": count}
+            for name, count in distritos_counter.most_common()
+        ]
+        
+        conceptos = [
+            {"concepto": name, "total": count}
+            for name, count in conceptos_counter.most_common()
+        ]
+        
+        timeline = [
+            {"fecha": date, "total": count}
+            for date, count in sorted(timeline_counter.items())
+        ]
+        
+        return {
+            "total_periodo": total_periodo,
+            "total_historico": total_historico,
+            "distritos": distritos,
+            "conceptos": conceptos,
+            "timeline": timeline
+        }
+    except Exception as e:
+        logger.error(f"Error al calcular estadísticas: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al calcular estadísticas en el servidor."
         )
 
 @router.get("/verificar/{llave}", response_model=VialidadVerifyResponse)

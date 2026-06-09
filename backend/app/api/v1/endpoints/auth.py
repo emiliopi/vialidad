@@ -126,6 +126,18 @@ def get_me(current_user: User = Depends(get_current_user), db: Session = Depends
         {"label": m.label, "path": m.path, "icon": m.icon}
         for m in current_user.rol.menus
     ]
+    
+    # Ordenar de acuerdo a la prioridad de rutas solicitada
+    orden_rutas = [
+        "/dashboard",
+        "/catalog",
+        "/dev-guide",
+        "/vialidades",
+        "/usuarios",
+        "/configuracion",
+        "/permisos"
+    ]
+    user_menus.sort(key=lambda x: orden_rutas.index(x["path"]) if x["path"] in orden_rutas else 999)
     return {
         "id": str(current_user.codigo_usuario),
         "username": current_user.usuario,

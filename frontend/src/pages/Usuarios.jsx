@@ -185,7 +185,7 @@ export const Usuarios = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-300">
+      <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-300">
         
         {/* Cabecera de la Página */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
