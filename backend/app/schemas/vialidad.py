@@ -38,3 +38,8 @@ class VialidadVerifyResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class VialidadPaginationResponse(BaseModel):
+    items: list[VialidadResponse]
+    total: int
+

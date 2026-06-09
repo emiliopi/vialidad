@@ -10,6 +10,7 @@ import DevGuide from './pages/DevGuide';
 import Usuarios from './pages/Usuarios';
 import Vialidades from './pages/Vialidades';
 import VerificarVialidad from './pages/VerificarVialidad';
+import Configuracion from './pages/Configuracion';
 
 
 // Componente para proteger rutas públicas de usuarios ya autenticados
@@ -44,6 +45,7 @@ function App() {
             <Route path="/dev-guide" element={<DevGuide />} />
             <Route path="/usuarios" element={<Usuarios />} />
             <Route path="/vialidades" element={<Vialidades />} />
+            <Route path="/configuracion" element={<Configuracion />} />
           </Route>
 
           {/* Redirecciones por Defecto */}

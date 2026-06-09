@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 import logging
@@ -6,7 +6,7 @@ import logging
 from app.api import deps
 from app.models.vialidad import Vialidad
 from app.models.user import User
-from app.schemas.vialidad import VialidadCreate, VialidadResponse, VialidadVerifyResponse
+from app.schemas.vialidad import VialidadCreate, VialidadResponse, VialidadVerifyResponse, VialidadPaginationResponse
 
 logger = logging.getLogger("app.api.v1.endpoints.vialidades")
 router = APIRouter()
@@ -106,4 +106,39 @@ def verify_vialidad(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error interno al procesar la verificación."
+        )
+
+@router.get("/", response_model=VialidadPaginationResponse)
+def get_vialidades(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=10, ge=1, le=100),
+    search: str = Query(default="")
+):
+    """
+    Lista las boletas de vialidad de forma paginada con buscador server-side.
+    Requiere token JWT activo.
+    """
+    try:
+        skip = (page - 1) * limit if page > 0 else 0
+        query = db.query(Vialidad)
+        
+        if search:
+            search_filter = f"%{search}%"
+            query = query.filter(
+                (Vialidad.nombre.ilike(search_filter)) |
+                (Vialidad.numero_recibo.ilike(search_filter)) |
+                (Vialidad.llave_unica.ilike(search_filter))
+            )
+            
+        total = query.count()
+        items = query.order_by(Vialidad.codigo_vialidad.desc()).offset(skip).limit(limit).all()
+        
+        return {"items": items, "total": total}
+    except Exception as e:
+        logger.error(f"Error al listar vialidades: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al consultar las vialidades en el servidor."
         )

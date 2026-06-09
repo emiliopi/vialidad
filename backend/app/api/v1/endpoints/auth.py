@@ -35,7 +35,7 @@ def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
         samesite="lax",                             # ← Protección CSRF básica
         secure=settings.ENVIRONMENT == "production", # ← HTTPS solo en producción
         max_age=REFRESH_COOKIE_MAX_AGE,
-        path="/api/auth",                          # ← Solo enviada a endpoints de auth
+        path="/",                          # ← Cambiado a '/' para evitar fallas de ruta en localhost
     )
 
 
@@ -109,7 +109,7 @@ def logout(
     # Expirar la cookie en el navegador del cliente
     response.delete_cookie(
         key=REFRESH_COOKIE_NAME,
-        path="/api/auth",
+        path="/",
         httponly=True,
         samesite="lax",
     )

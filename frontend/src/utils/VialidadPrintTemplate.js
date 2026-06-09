@@ -2,8 +2,49 @@
  * Genera la plantilla HTML para la impresión del Boleto-Recibo de Vialidad
  * optimizada para tamaño Carta (Letter).
  */
-export const getVialidadPrintTemplate = (data, llave, qrUrl, conMarcaAgua = true) => {
+const numeroALetras = (numero) => {
+  const unidades = ["CERO", "UN", "DOS", "TRES", "CUATRO", "CINCO", "SEIS", "SIETE", "OCHO", "NUEVE"];
+  const decenas = ["DIEZ", "VEINTE", "TREINTA", "CUARENTA", "CINCUENTA", "SESENTA", "SETENTA", "OCHENTA", "NOVENTA"];
+  const especiales = {
+    11: "ONCE", 12: "DOCE", 13: "TRECE", 14: "CATORCE", 15: "QUINCE",
+    16: "DIECISEIS", 17: "DIECISIETE", 18: "DIECIOCHO", 19: "DIECINUEVE",
+    21: "VEINTIUNO", 22: "VEINTIDOS", 23: "VEINTITRES", 24: "VEINTICUATRO", 25: "VEINTICINCO",
+    26: "VEINTISEIS", 27: "VEINTISIETE", 28: "VEINTIOCHO", 29: "VEINTINUEVE"
+  };
+
+  const parteEntera = Math.floor(numero);
+  const parteDecimal = Math.round((numero - parteEntera) * 100);
+
+  let letrasEntera = "";
+  if (parteEntera < 10) {
+    letrasEntera = unidades[parteEntera];
+  } else if (especiales[parteEntera]) {
+    letrasEntera = especiales[parteEntera];
+  } else {
+    const u = parteEntera % 10;
+    const d = Math.floor(parteEntera / 10);
+    letrasEntera = decenas[d - 1] + (u > 0 ? ` Y ${unidades[u]}` : "");
+  }
+
+  let letrasDecimal = "";
+  if (parteDecimal === 0) {
+    letrasDecimal = "CERO";
+  } else if (parteDecimal < 10) {
+    letrasDecimal = unidades[parteDecimal];
+  } else if (especiales[parteDecimal]) {
+    letrasDecimal = especiales[parteDecimal];
+  } else {
+    const u = parteDecimal % 10;
+    const d = Math.floor(parteDecimal / 10);
+    letrasDecimal = decenas[d - 1] + (u > 0 ? ` Y ${unidades[u]}` : "");
+  }
+
+  return `${letrasEntera} DOLARES CON ${letrasDecimal} CENTAVOS`;
+};
+
+export const getVialidadPrintTemplate = (data, llave, qrUrl, conMarcaAgua = true, precio = 3.43, firmaAlcaldeUrl = '', firmaSecretarioUrl = '') => {
   const currentYear = new Date().getFullYear();
+  const backendBaseUrl = 'http://localhost:8000';
 
   const watermarkHtml = conMarcaAgua ? `
     <div class="watermark-container">
@@ -188,13 +229,13 @@ export const getVialidadPrintTemplate = (data, llave, qrUrl, conMarcaAgua = true
 
                 <div class="text-right">
                   <div class="text-[13px] font-bold tracking-wide text-sky-700 uppercase">
-                    VALOR <span class="font-extrabold text-sky-700">$3.43</span>
+                    VALOR <span class="font-extrabold text-sky-700">$${Number(precio).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-
+ 
           <div class="relative z-10 my-3 bg-white/50 p-4 rounded-2xl text-sky-800 text-sm leading-relaxed text-justify space-y-2.5">
             <div class="flex items-end gap-2 w-full">
               <span class="font-bold text-sky-800 shrink-0 pb-0.5">Contribuyente:</span>
@@ -202,12 +243,12 @@ export const getVialidadPrintTemplate = (data, llave, qrUrl, conMarcaAgua = true
                 ${data.solicitante || '&nbsp;'}
               </strong>
             </div>
-
+ 
             <p class="text-sky-800 font-medium leading-relaxed">
-              ha pagado en este Distrito la suma de <strong class="text-sky-800 font-bold">TRES DOLARES CON CUARENTA Y TRES centavos</strong>, que le corresponde como contribuyente al Fondo de Vialidad en concepto de <strong class="inline-block min-w-[150px] text-base uppercase border-b border-sky-300 px-3 py-0.5 font-bold tracking-wide text-slate-600">${data.concepto || '&nbsp;'}</strong>. Durante el presente año.
+              ha pagado en este Distrito la suma de <strong class="text-sky-800 font-bold uppercase">${numeroALetras(Number(precio))}</strong>, que le corresponde como contribuyente al Fondo de Vialidad en concepto de <strong class="inline-block min-w-[150px] text-base uppercase border-b border-sky-300 px-3 py-0.5 font-bold tracking-wide text-slate-600">${data.concepto || '&nbsp;'}</strong>. Durante el presente año.
             </p>
           </div>
-
+ 
           <!-- Firmas y Fechas -->
           <div class="relative z-10 grid grid-cols-2 gap-6 border-t border-sky-200/30 pt-2 mt-auto">
             <div class="flex flex-col items-center justify-between text-center space-y-8">
@@ -221,7 +262,7 @@ export const getVialidadPrintTemplate = (data, llave, qrUrl, conMarcaAgua = true
               <div class="relative flex flex-col items-center pt-4">
                 <!-- Imagen de Firma Real -->
                 <img 
-                  src="/firma_alcalde.png" 
+                  src="${firmaAlcaldeUrl ? `${backendBaseUrl}${firmaAlcaldeUrl}` : "/firma_alcalde.png"}" 
                   alt="Firma Alcalde" 
                   class="absolute -top-12 w-48 h-24 object-contain opacity-90"
                   onerror="this.style.display='none';" 
@@ -230,7 +271,7 @@ export const getVialidadPrintTemplate = (data, llave, qrUrl, conMarcaAgua = true
                 <p class="text-[10px] font-black text-sky-900 uppercase">Alcalde o Delegado</p>
               </div>
             </div>
-
+ 
             <div class="flex flex-col items-center justify-between text-center space-y-8">
               <div class="text-center space-y-0.5">
                 <span class="text-[10px] uppercase tracking-wider text-sky-600 font-bold">Fecha de Expiración</span>
@@ -238,11 +279,11 @@ export const getVialidadPrintTemplate = (data, llave, qrUrl, conMarcaAgua = true
                   31 de diciembre de ${currentYear}
                 </p>
               </div>
-
+ 
               <div class="relative flex flex-col items-center pt-4">
                 <!-- Imagen de Firma Real -->
                 <img 
-                  src="/firma_secretario.png" 
+                  src="${firmaSecretarioUrl ? `${backendBaseUrl}${firmaSecretarioUrl}` : "/firma_secretario.png"}" 
                   alt="Firma Secretario" 
                   class="absolute -top-12 w-48 h-24 object-contain opacity-90"
                   onerror="this.style.display='none';" 

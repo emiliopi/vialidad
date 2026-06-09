@@ -14,6 +14,16 @@ export const vialidadService = {
   },
 
   /**
+   * Obtiene el listado de vialidades emitidas de forma paginada.
+   */
+  getVialidades: async (page = 1, limit = 10, search = '') => {
+    const res = await api.get('/vialidades/', {
+      params: { page, limit, search }
+    });
+    return res.data;
+  },
+
+  /**
    * Consulta y valida una vialidad de forma pública (decrementa visualizaciones).
    */
   verifyVialidad: async (llave, numeroRecibo) => {

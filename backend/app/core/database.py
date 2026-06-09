@@ -34,6 +34,7 @@ def init_db() -> None:
         # Al añadir nuevos modelos al proyecto, importarlos aquí para que SQLAlchemy cree sus tablas.
         from app.models.user import User, Role
         from app.models.vialidad import Vialidad
+        from app.models.configuracion import ConfiguracionVialidad
         Base.metadata.create_all(bind=engine)
         logger.info("Base de datos inicializada correctamente.")
         
