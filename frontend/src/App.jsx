@@ -12,6 +12,10 @@ import Vialidades from './pages/Vialidades';
 import VerificarVialidad from './pages/VerificarVialidad';
 import Configuracion from './pages/Configuracion';
 import Permisos from './pages/Permisos';
+import Distritos from './pages/Distritos';
+import Conceptos from './pages/Conceptos';
+
+
 
 
 // Componente para proteger rutas públicas de usuarios ya autenticados
@@ -46,6 +50,8 @@ function App() {
             <Route path="/dev-guide" element={<DevGuide />} />
             <Route path="/usuarios" element={<Usuarios />} />
             <Route path="/vialidades" element={<Vialidades />} />
+            <Route path="/distritos" element={<Distritos />} />
+            <Route path="/conceptos" element={<Conceptos />} />
             <Route path="/configuracion" element={<Configuracion />} />
           </Route>
 

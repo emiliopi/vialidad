@@ -111,7 +111,8 @@ def create_user(
             usuario=user_in.usuario,
             email=user_in.email,
             password=hashed_password,
-            codigo_rol=user_in.codigo_rol
+            codigo_rol=user_in.codigo_rol,
+            codigo_usuario_creacion=current_user.codigo_usuario
         )
         db.add(db_obj)
         db.commit()
@@ -185,6 +186,7 @@ def update_user(
             salt = bcrypt.gensalt()
             db_obj.password = bcrypt.hashpw(user_in.password.encode('utf-8'), salt).decode('utf-8')
             
+        db_obj.codigo_usuario_modificacion = current_user.codigo_usuario
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)

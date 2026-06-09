@@ -1,7 +1,29 @@
-import React from 'react';
-import { Input, Checkbox } from '../Common';
+import React, { useState, useEffect } from 'react';
+import { Input, Checkbox, Select } from '../Common';
+import { distritoService } from '../../api/distritoService';
+import { conceptoService } from '../../api/conceptoService';
 
 export const VialidadForm = ({ data, onChange }) => {
+  const [distritos, setDistritos] = useState([]);
+  const [conceptos, setConceptos] = useState([]);
+
+  useEffect(() => {
+    const loadFormFields = async () => {
+      try {
+        const distRes = await distritoService.getDistritos(1, 100);
+        const activeDistritos = (distRes.items || []).filter(d => d.activo);
+        setDistritos(activeDistritos);
+
+        const concRes = await conceptoService.getConceptos(1, 100);
+        const activeConceptos = (concRes.items || []).filter(c => c.activo);
+        setConceptos(activeConceptos);
+      } catch (err) {
+        console.error("Error al cargar datos en el formulario de vialidades:", err);
+      }
+    };
+    loadFormFields();
+  }, []);
+
   const handleChange = (key, value) => {
     onChange({ ...data, [key]: value });
   };
@@ -21,12 +43,15 @@ export const VialidadForm = ({ data, onChange }) => {
           required
         />
 
-        <Input
+        <Select
           label="Municipio / Distrito (Opcional)"
           value={data.distrito || ''}
           onChange={(e) => handleChange('distrito', e.target.value)}
-          placeholder="Ej. San Salvador"
+          placeholder="Selecciona un distrito..."
+          searchable={true}
+          options={distritos.map(d => ({ value: d.nombre, label: d.nombre }))}
         />
+
 
         <Input
           label="Contribuyente *"
@@ -36,11 +61,13 @@ export const VialidadForm = ({ data, onChange }) => {
           required
         />
 
-        <Input
-          label="Concepto"
+        <Select
+          label="Concepto *"
           value={data.concepto || ''}
           onChange={(e) => handleChange('concepto', e.target.value)}
-          placeholder="Ej. Acceso Vial"
+          placeholder="Selecciona un concepto..."
+          searchable={true}
+          options={conceptos.map(c => ({ value: c.nombre, label: c.nombre }))}
         />
 
         <Input

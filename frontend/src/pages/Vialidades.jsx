@@ -52,7 +52,7 @@ export const Vialidades = () => {
     setLlave(`VIA-${currentYear}-${randomNum}`);
     setData({
       numeroRecibo: '',
-      distrito: 'SAN SALVADOR',
+      distrito: 'SAN SALVADOR CENTRO',
       solicitante: '',
       concepto: 'EMPLEADO',
       conMarcaAgua: true,

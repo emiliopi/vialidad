@@ -12,5 +12,13 @@ class ConfiguracionBase(BaseModel):
 class ConfiguracionUpdate(BaseModel):
     precio_vialidad: float = Field(..., gt=0, description="Precio unitario de la vialidad")
 
+from datetime import datetime
+
 class ConfiguracionResponse(ConfiguracionBase):
     id: int
+    codigo_usuario_creacion: Optional[int] = None
+    fecha_creacion: Optional[datetime] = None
+    codigo_usuario_modificacion: Optional[int] = None
+    fecha_modificacion: Optional[datetime] = None
+
+

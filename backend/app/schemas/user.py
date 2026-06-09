@@ -55,6 +55,8 @@ class UserResponseDetail(UserBase):
     ultimo_intento_login: Optional[datetime] = None
     fecha_creacion: datetime
     fecha_modificacion: datetime
+    codigo_usuario_creacion: Optional[int] = None
+    codigo_usuario_modificacion: Optional[int] = None
     rol: RoleResponse
 
     class Config:

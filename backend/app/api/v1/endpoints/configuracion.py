@@ -60,6 +60,7 @@ def update_configuracion(
     config = obtener_o_inicializar_config(db)
     try:
         config.precio_vialidad = config_in.precio_vialidad
+        config.codigo_usuario_modificacion = current_user.codigo_usuario
         db.commit()
         db.refresh(config)
         return config
@@ -115,6 +116,7 @@ def cargar_firma(
         else:
             config.firma_secretario_url = file_url
 
+        config.codigo_usuario_modificacion = current_user.codigo_usuario
         db.commit()
         db.refresh(config)
         return config

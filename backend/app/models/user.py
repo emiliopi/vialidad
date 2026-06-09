@@ -56,8 +56,13 @@ class User(Base):
         nullable=False
     )
 
+    # Campos de Auditoría (Usuarios)
+    codigo_usuario_creacion: Mapped[int] = mapped_column(BigInteger, ForeignKey("USUARIOS.codigo_usuario"), nullable=True)
+    codigo_usuario_modificacion: Mapped[int] = mapped_column(BigInteger, ForeignKey("USUARIOS.codigo_usuario"), nullable=True)
+
     # Relación inversa de muchos a uno con roles
     rol: Mapped["Role"] = relationship("Role", back_populates="usuarios")
 
     def __repr__(self) -> str:
         return f"<User codigo_usuario={self.codigo_usuario} usuario={self.usuario}>"
+

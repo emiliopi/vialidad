@@ -1,4 +1,5 @@
-from sqlalchemy import Integer, Numeric, String
+from datetime import datetime, timezone
+from sqlalchemy import Integer, Numeric, String, BigInteger, ForeignKey, DateTime
 from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 
@@ -14,5 +15,21 @@ class ConfiguracionVialidad(Base):
     firma_alcalde_url: Mapped[str] = mapped_column(String(255), nullable=True)
     firma_secretario_url: Mapped[str] = mapped_column(String(255), nullable=True)
 
+    # Campos de Auditoría
+    codigo_usuario_creacion: Mapped[int] = mapped_column(BigInteger, ForeignKey("USUARIOS.codigo_usuario"), nullable=True)
+    fecha_creacion: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        nullable=True
+    )
+    codigo_usuario_modificacion: Mapped[int] = mapped_column(BigInteger, ForeignKey("USUARIOS.codigo_usuario"), nullable=True)
+    fecha_modificacion: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        nullable=True
+    )
+
     def __repr__(self) -> str:
         return f"<ConfiguracionVialidad id={self.id} precio_vialidad={self.precio_vialidad}>"
+
