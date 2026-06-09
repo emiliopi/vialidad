@@ -34,12 +34,14 @@ export const Dashboard = () => {
     timeline: []
   });
   const [loading, setLoading] = useState(true);
+  const [timelinePage, setTimelinePage] = useState(1);
 
   const fetchStats = async () => {
     setLoading(true);
     try {
       const data = await vialidadService.getEstadisticas(fechaInicio, fechaFin);
       setStats(data);
+      setTimelinePage(1);
     } catch (err) {
       console.error(err);
       toast.error('Error al cargar las estadísticas del panel.');
@@ -234,42 +236,103 @@ export const Dashboard = () => {
                   No se registraron emisiones de vialidades en el período seleccionado.
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
-                    <thead>
-                      <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                        <th className="px-6 py-3.5">Fecha</th>
-                        <th className="px-6 py-3.5">Vialidades Emitidas</th>
-                        <th className="px-6 py-3.5 text-right">Proporción Diaria</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-                      {stats.timeline.map((t, index) => {
-                        const porcentaje = ((t.total / Math.max(1, stats.total_periodo)) * 100).toFixed(0);
-                        return (
-                          <tr key={index} className="hover:bg-slate-50/50 dark:hover:bg-slate-950/10 transition-colors">
-                            <td className="px-6 py-4 font-semibold text-slate-900 dark:text-slate-100">
-                              {new Date(t.fecha + 'T00:00:00').toLocaleDateString('es-ES', {
-                                weekday: 'long',
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric'
-                              })}
-                            </td>
-                            <td className="px-6 py-4 font-bold text-primary dark:text-sky-400">
-                              {t.total}
-                            </td>
-                            <td className="px-6 py-4 text-right">
-                              <span className="bg-slate-100 dark:bg-slate-950 text-slate-500 dark:text-slate-400 px-2.5 py-1 rounded-full font-bold">
-                                {porcentaje}% del período
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
+                      <thead>
+                        <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                          <th className="px-6 py-3.5 w-16">#</th>
+                          <th className="px-6 py-3.5">Fecha</th>
+                          <th className="px-6 py-3.5">Vialidades Emitidas</th>
+                          <th className="px-6 py-3.5 text-right">Proporción Diaria</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                        {stats.timeline
+                          .slice((timelinePage - 1) * 10, timelinePage * 10)
+                          .map((t, index) => {
+                            const porcentaje = ((t.total / Math.max(1, stats.total_periodo)) * 100).toFixed(0);
+                            return (
+                              <tr key={index} className="hover:bg-slate-50/50 dark:hover:bg-slate-950/10 transition-colors">
+                                <td className="px-6 py-4 font-semibold text-slate-400 dark:text-slate-500">
+                                  {(timelinePage - 1) * 10 + index + 1}
+                                </td>
+                                <td className="px-6 py-4 font-semibold text-slate-900 dark:text-slate-100">
+                                  {new Date(t.fecha + 'T00:00:00').toLocaleDateString('es-ES', {
+                                    weekday: 'long',
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                  })}
+                                </td>
+                                <td className="px-6 py-4 font-bold text-primary dark:text-sky-400">
+                                  {t.total}
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  <span className="bg-slate-100 dark:bg-slate-950 text-slate-500 dark:text-slate-400 px-2.5 py-1 rounded-full font-bold">
+                                    {porcentaje}% del período
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Paginador Local Numerado */}
+                  {Math.ceil(stats.timeline.length / 10) > 1 && (
+                    <div className="border-t border-slate-100 dark:border-slate-800 px-6 py-4 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/20">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        Mostrando página {timelinePage} de {Math.ceil(stats.timeline.length / 10)} ({stats.timeline.length} días registrados)
+                      </span>
+                      <div className="flex gap-1.5 items-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={timelinePage === 1}
+                          onClick={() => setTimelinePage((prev) => Math.max(1, prev - 1))}
+                        >
+                          Anterior
+                        </Button>
+                        {Array.from({ length: Math.ceil(stats.timeline.length / 10) }, (_, i) => i + 1)
+                          .filter((p) => {
+                            const totalPages = Math.ceil(stats.timeline.length / 10);
+                            return p === 1 || p === totalPages || Math.abs(p - timelinePage) <= 2;
+                          })
+                          .map((p, idx, arr) => {
+                            const totalPages = Math.ceil(stats.timeline.length / 10);
+                            return (
+                              <React.Fragment key={p}>
+                                {idx > 0 && arr[idx - 1] !== p - 1 && (
+                                  <span className="text-slate-400 text-xs px-1">...</span>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => setTimelinePage(p)}
+                                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${
+                                    timelinePage === p
+                                      ? 'bg-primary text-white border-primary dark:bg-sky-500 dark:border-sky-500'
+                                      : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-950/45'
+                                  }`}
+                                >
+                                  {p}
+                                </button>
+                              </React.Fragment>
+                            );
+                          })}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={timelinePage === Math.ceil(stats.timeline.length / 10)}
+                          onClick={() => setTimelinePage((prev) => Math.min(Math.ceil(stats.timeline.length / 10), prev + 1))}
+                        >
+                          Siguiente
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </>
