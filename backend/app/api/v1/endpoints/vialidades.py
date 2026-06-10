@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 from typing import Optional
@@ -8,6 +9,7 @@ from app.api import deps
 from app.models.vialidad import Vialidad
 from app.models.user import User
 from app.schemas.vialidad import VialidadCreate, VialidadResponse, VialidadVerifyResponse, VialidadPaginationResponse
+from app.services.pdf_generator import generar_pdf_vialidad
 
 logger = logging.getLogger("app.api.v1.endpoints.vialidades")
 router = APIRouter()
@@ -228,4 +230,47 @@ def get_vialidades(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error interno al consultar las vialidades en el servidor."
+        )
+
+@router.get("/{llave}/pdf")
+def get_vialidad_pdf(
+    llave: str,
+    numero_recibo: Optional[str] = Query(default=None),
+    db: Session = Depends(deps.get_db)
+):
+    """
+    Genera y descarga el PDF oficial de una boleta de vialidad de forma pública.
+    Si se provee el numero_recibo, valida que coincida.
+    """
+    try:
+        query = db.query(Vialidad).filter(Vialidad.llave_unica == llave)
+        if numero_recibo:
+            query = query.filter(Vialidad.numero_recibo == numero_recibo)
+            
+        vialidad = query.first()
+        if not vialidad:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="La boleta de vialidad especificada no existe."
+            )
+            
+        pdf_buffer = generar_pdf_vialidad(vialidad)
+        
+        filename = f"boleta_vialidad_{vialidad.numero_recibo}.pdf"
+        headers = {
+            "Content-Disposition": f'inline; filename="{filename}"'
+        }
+        
+        return StreamingResponse(
+            pdf_buffer,
+            media_type="application/pdf",
+            headers=headers
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error al generar/descargar PDF de vialidad {llave}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al generar el archivo PDF."
         )

@@ -1,0 +1,27 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Prueba de Impresion Headless</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @page {
+            size: letter;
+            margin: 1cm;
+        }
+        body {
+            font-family: sans-serif;
+        }
+    </style>
+</head>
+<body class="p-8">
+    <div class="border-2 border-sky-400 rounded-2xl p-6 bg-sky-50 max-w-md mx-auto text-center shadow-lg">
+        <h1 class="text-2xl font-black text-sky-700 uppercase">Boleta Oficial</h1>
+        <p class="text-slate-600 mt-2">Esta es una prueba de renderizado headless usando Microsoft Edge.</p>
+        <div class="mt-4 p-3 bg-white border border-sky-200 rounded-xl text-sky-800 font-bold">
+            VALOR: $3.43
+        </div>
+    </div>
+</body>
+</html>
