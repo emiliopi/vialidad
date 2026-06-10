@@ -80,7 +80,7 @@ def resolver_ruta_archivo(url_o_path: str) -> str:
         pass
     return ""
 
-def generar_pdf_vialidad(vialidad: Vialidad) -> io.BytesIO:
+def generar_pdf_vialidad(vialidad: Vialidad, url_verificador: str = None) -> io.BytesIO:
     """
     Genera la boleta de vialidad oficial renderizando la plantilla HTML literal de impresión
     de React utilizando Microsoft Edge Headless con soporte completo de tiempo virtual para scripts.
@@ -99,7 +99,8 @@ def generar_pdf_vialidad(vialidad: Vialidad) -> io.BytesIO:
         firma_secretario_url = (PUBLIC_DIR / "firma_secretario.png").as_uri()
 
     # 3. Generar URL de verificación para el QR
-    verification_data = f"{settings.FRONTEND_URL}/verificar/{vialidad.llave_unica}?recibo={vialidad.numero_recibo}"
+    base_validator_url = url_verificador or settings.VALIDATOR_URL
+    verification_data = f"{base_validator_url}/verificar/{vialidad.llave_unica}"
     qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={urllib.parse.quote(verification_data)}"
     
     # 4. Preparar textos y variables
@@ -372,7 +373,7 @@ def generar_pdf_vialidad(vialidad: Vialidad) -> io.BytesIO:
           
           <div class="flex flex-col items-center pt-2">
             <img src="{qr_url}" alt="Código QR de Verificación" class="w-32 h-32 border border-sky-200 p-1 bg-white rounded-lg shadow-sm" />
-            <p class="text-[8px] font-mono text-sky-700 mt-1">https://vialidad.gob.sv/verificar/{vialidad.llave_unica}</p>
+            <p class="text-[8px] font-mono text-sky-700 mt-1">{verification_data}</p>
           </div>
         </div>
         

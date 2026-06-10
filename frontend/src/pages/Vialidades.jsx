@@ -22,6 +22,7 @@ export const Vialidades = () => {
   const [configPrecio, setConfigPrecio] = useState(3.43);
   const [configAlcaldeFirma, setConfigAlcaldeFirma] = useState('');
   const [configSecretarioFirma, setConfigSecretarioFirma] = useState('');
+  const [configUrlVerificador, setConfigUrlVerificador] = useState(window.location.origin);
 
   // Estados para la Previsualización de un Registro Existente
   const [selectedVialidad, setSelectedVialidad] = useState(null);
@@ -93,6 +94,9 @@ export const Vialidades = () => {
       setConfigPrecio(config.precio_vialidad);
       setConfigAlcaldeFirma(config.firma_alcalde_url || '');
       setConfigSecretarioFirma(config.firma_secretario_url || '');
+      if (config.url_verificador) {
+        setConfigUrlVerificador(config.url_verificador);
+      }
     } catch (err) {
       console.error('Error al obtener la configuración:', err);
     }
@@ -105,13 +109,13 @@ export const Vialidades = () => {
   }, []);
 
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
-    window.location.origin + '/verificar/' + llave + '?recibo=' + data.numeroRecibo
+    configUrlVerificador + '/verificar/' + llave
   )}`;
 
   // Imprimir desde un registro del datatable (Re-imprimir)
   const handlePrintExisting = (vialidadObj) => {
     const qrUrlExisting = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
-      window.location.origin + '/verificar/' + vialidadObj.llave_unica + '?recibo=' + vialidadObj.numero_recibo
+      configUrlVerificador + '/verificar/' + vialidadObj.llave_unica
     )}`;
 
     const docData = {
@@ -239,12 +243,12 @@ export const Vialidades = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5 print:hidden">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              Boleto de Vialidades
+              Vialidades
             </h1>
             <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
               {isCreating 
                 ? 'Ingresa los datos para confeccionar el documento en formato oficial de papel bond listo para imprimir.' 
-                : 'Listado y consulta de boletas de vialidad emitidas con visualización en verificador QR.'}
+                : 'Listado y consulta de vialidades emitidas con visualización en verificador QR.'}
             </p>
           </div>
           <div>
@@ -472,7 +476,7 @@ export const Vialidades = () => {
         <Modal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          title="Vista Previa de Boleta emitida"
+          title="Vista Previa de Vialidad"
           size="full"
           footer={
             <div className="flex justify-end gap-2.5 w-full">
@@ -503,7 +507,7 @@ export const Vialidades = () => {
                   }}
                   llave={selectedVialidad.llave_unica}
                   qrUrl={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
-                    window.location.origin + '/verificar/' + selectedVialidad.llave_unica + '?recibo=' + selectedVialidad.numero_recibo
+                    configUrlVerificador + '/verificar/' + selectedVialidad.llave_unica
                   )}`}
                   precio={selectedVialidad.precio_vialidad !== undefined && selectedVialidad.precio_vialidad !== null ? selectedVialidad.precio_vialidad : configPrecio}
                   firmaAlcaldeUrl={selectedVialidad.firma_alcalde_url || configAlcaldeFirma}

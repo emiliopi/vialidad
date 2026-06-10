@@ -14,6 +14,8 @@ router = APIRouter()
 
 from pathlib import Path
 
+from app.core.config import settings
+
 # Carpeta local para almacenar las firmas subidas (5 niveles arriba de api/v1/endpoints/)
 STATIC_DIR = os.path.join(Path(__file__).resolve().parents[4], "static")
 FIRMAS_DIR = os.path.join(STATIC_DIR, "firmas")
@@ -37,6 +39,9 @@ def obtener_o_inicializar_config(db: Session) -> ConfiguracionVialidad:
             logger.error(f"Error al inicializar la configuración por defecto: {str(e)}")
             # En caso de concurrencia, re-intentar obtener
             config = db.query(ConfiguracionVialidad).filter(ConfiguracionVialidad.id == 1).first()
+    
+    if config:
+        config.url_verificador = settings.VALIDATOR_URL
     return config
 
 @router.get("/", response_model=ConfiguracionResponse)

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
@@ -235,7 +235,9 @@ def get_vialidades(
 @router.get("/{llave}/pdf")
 def get_vialidad_pdf(
     llave: str,
+    request: Request,
     numero_recibo: Optional[str] = Query(default=None),
+    url_verificador: Optional[str] = Query(default=None),
     db: Session = Depends(deps.get_db)
 ):
     """
@@ -254,7 +256,20 @@ def get_vialidad_pdf(
                 detail="La boleta de vialidad especificada no existe."
             )
             
-        pdf_buffer = generar_pdf_vialidad(vialidad)
+        # Resolver la URL del verificador QR
+        from app.core.config import settings
+        resolved_url = url_verificador or settings.VALIDATOR_URL
+        
+        # Si la URL configurada apunta a localhost/127.0.0.1 pero la petición viene de otra IP/Host (ej. red local o DNS),
+        # adaptamos dinámicamente localhost a la IP/Host de la petición para que el código QR funcione correctamente.
+        if "localhost" in resolved_url or "127.0.0.1" in resolved_url:
+            request_host = request.headers.get("host")
+            if request_host:
+                hostname = request_host.split(":")[0]
+                if hostname not in ("localhost", "127.0.0.1"):
+                    resolved_url = resolved_url.replace("localhost", hostname).replace("127.0.0.1", hostname)
+            
+        pdf_buffer = generar_pdf_vialidad(vialidad, url_verificador=resolved_url)
         
         filename = f"boleta_vialidad_{vialidad.numero_recibo}.pdf"
         headers = {

@@ -16,6 +16,7 @@ from datetime import datetime
 
 class ConfiguracionResponse(ConfiguracionBase):
     id: int
+    url_verificador: Optional[str] = None
     codigo_usuario_creacion: Optional[int] = None
     fecha_creacion: Optional[datetime] = None
     codigo_usuario_modificacion: Optional[int] = None

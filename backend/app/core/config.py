@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=15)
     REFRESH_TOKEN_EXPIRE_DAYS: int = Field(default=7)
     FRONTEND_URL: str = Field(default="http://localhost:5173")
+    VALIDATOR_URL: str = Field(default="http://localhost:5174")
 
     # Intentos fallidos y bloqueo
     MAX_LOGIN_ATTEMPTS: int = Field(default=5)

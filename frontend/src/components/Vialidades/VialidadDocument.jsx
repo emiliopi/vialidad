@@ -45,6 +45,16 @@ export const VialidadDocument = ({ data, llave, qrUrl, precio = 3.43, firmaAlcal
   const currentYear = new Date().getFullYear();
   const backendBaseUrl = 'http://localhost:8000';
 
+  let targetUrl = `https://vialidad.gob.sv/verificar/${llave}`;
+  try {
+    if (qrUrl) {
+      const parsed = new URL(qrUrl);
+      targetUrl = parsed.searchParams.get('data') || targetUrl;
+    }
+  } catch (e) {
+    console.error("Error parsing qrUrl", e);
+  }
+
   return (
     <div 
       id="print-area"
@@ -187,7 +197,7 @@ export const VialidadDocument = ({ data, llave, qrUrl, precio = 3.43, firmaAlcal
 
           <div className="flex flex-col items-center pt-2">
             <img src={qrUrl} alt="Código QR de Verificación" className="w-32 h-32 border border-sky-200 p-1 bg-white rounded-lg shadow-sm" />
-            <p className="text-[8px] font-mono text-sky-700 mt-1">https://vialidad.gob.sv/verificar/{llave}</p>
+            <p className="text-[8px] font-mono text-sky-700 mt-1">{targetUrl}</p>
           </div>
         </div>
 
