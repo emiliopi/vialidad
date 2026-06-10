@@ -26,6 +26,9 @@ class VialidadResponse(VialidadBase):
     fecha_creacion: datetime
     codigo_usuario_modificacion: Optional[int]
     fecha_modificacion: datetime
+    precio_vialidad: Optional[float] = None
+    firma_alcalde_url: Optional[str] = None
+    firma_secretario_url: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -34,7 +37,7 @@ class VialidadVerifyResponse(BaseModel):
     exitoso: bool
     mensaje: str
     visualizaciones_restantes: int
-    datos: Optional[VialidadBase] = None
+    datos: Optional[VialidadResponse] = None
 
     class Config:
         from_attributes = True

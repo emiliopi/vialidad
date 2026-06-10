@@ -9,7 +9,6 @@ import Catalog from './pages/Catalog';
 import DevGuide from './pages/DevGuide';
 import Usuarios from './pages/Usuarios';
 import Vialidades from './pages/Vialidades';
-import VerificarVialidad from './pages/VerificarVialidad';
 import Configuracion from './pages/Configuracion';
 import Permisos from './pages/Permisos';
 import Distritos from './pages/Distritos';
@@ -40,8 +39,6 @@ function App() {
           {/* Rutas Públicas */}
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-          <Route path="/verificar/:llave" element={<VerificarVialidad />} />
-          <Route path="/verificar" element={<VerificarVialidad />} />
           
           {/* Rutas Protegidas de Autenticación */}
           <Route element={<ProtectedRoute />}>

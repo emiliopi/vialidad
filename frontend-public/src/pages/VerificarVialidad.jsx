@@ -131,16 +131,13 @@ export const VerificarVialidad = () => {
             </div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Error de Validación</h2>
             <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">{errorMsg}</p>
-            <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
+            <div className="pt-2 flex justify-center">
               <button
                 onClick={handleReset}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-705 dark:text-slate-200 font-bold text-sm px-6 py-2.5 rounded-xl transition-all"
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 font-bold text-sm px-6 py-2.5 rounded-xl transition-all"
               >
                 Intentar de Nuevo
               </button>
-              <Link to="/login" className="bg-sky-700 hover:bg-sky-800 text-white font-bold text-sm px-6 py-2.5 rounded-xl transition-all shadow-sm">
-                Iniciar Sesión
-              </Link>
             </div>
           </div>
         ) : !result?.exitoso ? (
@@ -197,6 +194,9 @@ export const VerificarVialidad = () => {
                 qrUrl={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
                   window.location.origin + '/verificar/' + result.datos.llave_unica + '?recibo=' + result.datos.numero_recibo
                 )}`}
+                precio={result.datos.precio_vialidad}
+                firmaAlcaldeUrl={result.datos.firma_alcalde_url}
+                firmaSecretarioUrl={result.datos.firma_secretario_url}
               />
             </div>
             
@@ -214,7 +214,7 @@ export const VerificarVialidad = () => {
 
       {/* Pie de Página */}
       <footer className="bg-slate-100 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-4 px-6 text-center text-xs text-slate-500 dark:text-slate-400">
-        <p>© {new Date().getFullYear()} Fondo de Vialidad - Ministerio de Hacienda. República de El Salvador. Todos los derechos reservados.</p>
+        <p>© {new Date().getFullYear()} Alcaldia de San Salvador Centro. Todos los derechos reservados.</p>
       </footer>
     </div>
   );

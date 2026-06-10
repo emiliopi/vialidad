@@ -99,8 +99,9 @@ def cargar_firma(
 
     config = obtener_o_inicializar_config(db)
 
-    # Definir nombre de archivo único
-    filename = f"firma_{tipo}_{config.id}{extension}"
+    # Definir nombre de archivo único con UUID para evitar sobrescribir históricos
+    import uuid
+    filename = f"firma_{tipo}_{uuid.uuid4().hex}{extension}"
     file_path = os.path.join(FIRMAS_DIR, filename)
 
     try:

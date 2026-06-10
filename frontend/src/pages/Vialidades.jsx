@@ -132,7 +132,11 @@ export const Vialidades = () => {
     iframe.style.border = '0';
     document.body.appendChild(iframe);
 
-    const htmlContent = getVialidadPrintTemplate(docData, vialidadObj.llave_unica, qrUrlExisting, vialidadObj.con_marca_agua, configPrecio, configAlcaldeFirma, configSecretarioFirma);
+    const printPrecio = vialidadObj.precio_vialidad !== undefined && vialidadObj.precio_vialidad !== null ? vialidadObj.precio_vialidad : configPrecio;
+    const printAlcalde = vialidadObj.firma_alcalde_url || configAlcaldeFirma;
+    const printSecretario = vialidadObj.firma_secretario_url || configSecretarioFirma;
+
+    const htmlContent = getVialidadPrintTemplate(docData, vialidadObj.llave_unica, qrUrlExisting, vialidadObj.con_marca_agua, printPrecio, printAlcalde, printSecretario);
     
     const doc = iframe.contentDocument || iframe.contentWindow.document;
     doc.open();
@@ -501,9 +505,9 @@ export const Vialidades = () => {
                   qrUrl={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
                     window.location.origin + '/verificar/' + selectedVialidad.llave_unica + '?recibo=' + selectedVialidad.numero_recibo
                   )}`}
-                  precio={configPrecio}
-                  firmaAlcaldeUrl={configAlcaldeFirma}
-                  firmaSecretarioUrl={configSecretarioFirma}
+                  precio={selectedVialidad.precio_vialidad !== undefined && selectedVialidad.precio_vialidad !== null ? selectedVialidad.precio_vialidad : configPrecio}
+                  firmaAlcaldeUrl={selectedVialidad.firma_alcalde_url || configAlcaldeFirma}
+                  firmaSecretarioUrl={selectedVialidad.firma_secretario_url || configSecretarioFirma}
                 />
               </div>
             </div>

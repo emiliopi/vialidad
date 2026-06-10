@@ -30,6 +30,13 @@ def create_vialidad(
             detail="La llave única especificada ya está registrada."
         )
 
+    # Obtener configuración actual para guardar la instantánea (snapshot)
+    from app.models.configuracion import ConfiguracionVialidad
+    config = db.query(ConfiguracionVialidad).filter(ConfiguracionVialidad.id == 1).first()
+    precio = config.precio_vialidad if config else 3.43
+    alcalde_url = config.firma_alcalde_url if config else None
+    secretario_url = config.firma_secretario_url if config else None
+
     try:
         db_obj = Vialidad(
             llave_unica=vialidad_in.llave_unica,
@@ -42,7 +49,10 @@ def create_vialidad(
             con_marca_agua=vialidad_in.con_marca_agua,
             max_visualizaciones=vialidad_in.max_visualizaciones,
             visualizaciones_restantes=vialidad_in.max_visualizaciones, # Inicializa con el máximo
-            codigo_usuario_creacion=current_user.codigo_usuario
+            codigo_usuario_creacion=current_user.codigo_usuario,
+            precio_vialidad=precio,
+            firma_alcalde_url=alcalde_url,
+            firma_secretario_url=secretario_url
         )
         db.add(db_obj)
         db.commit()
@@ -115,7 +125,7 @@ def get_vialidades_estadisticas(
         
         timeline = [
             {"fecha": date, "total": count}
-            for date, count in sorted(timeline_counter.items())
+            for date, count in sorted(timeline_counter.items(), reverse=True)
         ]
         
         return {

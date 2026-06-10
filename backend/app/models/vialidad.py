@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, Boolean
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, Boolean, Numeric
 from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 
@@ -35,6 +35,11 @@ class Vialidad(Base):
         onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
         nullable=False
     )
+
+    # Instantáneas de Auditoría Histórica (Snapshots de firmas y precios en la emisión)
+    precio_vialidad: Mapped[float] = mapped_column(Numeric(10, 2), nullable=True)
+    firma_alcalde_url: Mapped[str] = mapped_column(String(255), nullable=True)
+    firma_secretario_url: Mapped[str] = mapped_column(String(255), nullable=True)
 
     def __repr__(self) -> str:
         return f"<Vialidad codigo_vialidad={self.codigo_vialidad} llave_unica={self.llave_unica} numero_recibo={self.numero_recibo}>"
