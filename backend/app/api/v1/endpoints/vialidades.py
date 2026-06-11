@@ -24,13 +24,32 @@ def create_vialidad(
     Guarda el registro de una nueva vialidad impresa.
     Requiere token JWT activo.
     """
-    # Validar si ya existe la llave única
-    existing = db.query(Vialidad).filter(Vialidad.llave_unica == vialidad_in.llave_unica).first()
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="La llave única especificada ya está registrada."
-        )
+    # Obtener o autogenerar la llave única
+    llave = vialidad_in.llave_unica
+    if not llave:
+        import random
+        while True:
+            now = datetime.now()
+            # Formato: VIA-YYYY-MMDDHHMMSS (ej: VIA-2026-0610141720)
+            timestamp_str = now.strftime("%m%d%H%M%S")
+            llave_candidata = f"VIA-{now.year}-{timestamp_str}"
+            existing_llave = db.query(Vialidad).filter(Vialidad.llave_unica == llave_candidata).first()
+            if not existing_llave:
+                llave = llave_candidata
+                break
+            else:
+                # Sufijo aleatorio de seguridad por colisión extrema de concurrencia
+                rand_suffix = random.randint(10, 99)
+                llave = f"VIA-{now.year}-{timestamp_str}{rand_suffix}"
+                break
+    else:
+        # Validar si ya existe la llave única especificada
+        existing = db.query(Vialidad).filter(Vialidad.llave_unica == llave).first()
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="La llave única especificada ya está registrada."
+            )
 
     # Obtener configuración actual para guardar la instantánea (snapshot)
     from app.models.configuracion import ConfiguracionVialidad
@@ -41,11 +60,11 @@ def create_vialidad(
 
     try:
         db_obj = Vialidad(
-            llave_unica=vialidad_in.llave_unica,
-            numero_recibo=vialidad_in.numero_recibo,
-            nombre=vialidad_in.nombre,
-            distrito=vialidad_in.distrito,
-            concepto=vialidad_in.concepto,
+            llave_unica=llave.upper() if llave else None,
+            numero_recibo=vialidad_in.numero_recibo.upper() if vialidad_in.numero_recibo else None,
+            nombre=vialidad_in.nombre.upper() if vialidad_in.nombre else None,
+            distrito=vialidad_in.distrito.upper() if vialidad_in.distrito else None,
+            concepto=vialidad_in.concepto.upper() if vialidad_in.concepto else None,
             fecha_emision=vialidad_in.fecha_emision,
             fecha_expiracion=vialidad_in.fecha_expiracion,
             con_marca_agua=vialidad_in.con_marca_agua,
@@ -238,10 +257,11 @@ def get_vialidad_pdf(
     request: Request,
     numero_recibo: Optional[str] = Query(default=None),
     url_verificador: Optional[str] = Query(default=None),
-    db: Session = Depends(deps.get_db)
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
 ):
     """
-    Genera y descarga el PDF oficial de una boleta de vialidad de forma pública.
+    Genera la boleta de vialidad y retorna el archivo PDF codificado en Base64.
     Si se provee el numero_recibo, valida que coincida.
     """
     try:
@@ -271,16 +291,10 @@ def get_vialidad_pdf(
             
         pdf_buffer = generar_pdf_vialidad(vialidad, url_verificador=resolved_url)
         
-        filename = f"boleta_vialidad_{vialidad.numero_recibo}.pdf"
-        headers = {
-            "Content-Disposition": f'inline; filename="{filename}"'
-        }
-        
-        return StreamingResponse(
-            pdf_buffer,
-            media_type="application/pdf",
-            headers=headers
-        )
+        import base64 as b64
+        pdf_bytes = pdf_buffer.getvalue()
+        pdf_b64 = b64.b64encode(pdf_bytes).decode("utf-8")
+        return {"pdf_base64": pdf_b64}
     except HTTPException:
         raise
     except Exception as e:

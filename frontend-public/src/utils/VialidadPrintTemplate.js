@@ -42,9 +42,32 @@ const numeroALetras = (numero) => {
   return `${letrasEntera} DOLARES CON ${letrasDecimal} CENTAVOS`;
 };
 
+const formatFechaEspanol = (dateStr) => {
+  if (!dateStr) return '';
+  if (dateStr.includes('de')) return dateStr;
+  try {
+    const cleanDate = dateStr.split('T')[0];
+    const parts = cleanDate.split('-');
+    if (parts.length === 3) {
+      const year = parts[0];
+      const monthIndex = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      const meses = [
+        "enero", "febrero", "marzo", "abril", "mayo", "junio",
+        "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+      ];
+      return `${day} de ${meses[monthIndex]} de ${year}`;
+    }
+  } catch (e) {
+    console.error(e);
+  }
+  return dateStr;
+};
+
 export const getVialidadPrintTemplate = (data, llave, qrUrl, conMarcaAgua = true, precio = 3.43, firmaAlcaldeUrl = '', firmaSecretarioUrl = '') => {
   const currentYear = new Date().getFullYear();
-  const backendBaseUrl = 'http://localhost:8000';
+  const apiVal = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+  const backendBaseUrl = apiVal.endsWith('/api') ? apiVal.substring(0, apiVal.length - 4) : apiVal;
 
   const watermarkHtml = conMarcaAgua ? `
     <div class="watermark-container">
@@ -255,7 +278,7 @@ export const getVialidadPrintTemplate = (data, llave, qrUrl, conMarcaAgua = true
               <div class="text-center space-y-0.5">
                 <span class="text-[10px] uppercase tracking-wider text-sky-600 font-bold">Fecha de Emisión</span>
                 <p class="text-sm font-black text-sky-900 underline decoration-sky-300 decoration-2">
-                  ${data.fecha || '____________________'}
+                  ${formatFechaEspanol(data.fecha) || '____________________'}
                 </p>
               </div>
               
@@ -276,7 +299,7 @@ export const getVialidadPrintTemplate = (data, llave, qrUrl, conMarcaAgua = true
               <div class="text-center space-y-0.5">
                 <span class="text-[10px] uppercase tracking-wider text-sky-600 font-bold">Fecha de Expiración</span>
                 <p class="text-sm font-black text-sky-900 underline decoration-sky-300 decoration-2">
-                  31 de diciembre de ${currentYear}
+                  ${formatFechaEspanol(data.fecha_expiracion) || `31 de diciembre de ${currentYear}`}
                 </p>
               </div>
  

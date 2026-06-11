@@ -8,6 +8,35 @@ import { getVialidadPrintTemplate } from '../utils/VialidadPrintTemplate';
 import { vialidadService } from '../api/vialidadService';
 import { configuracionService } from '../api/configuracionService';
 
+export const formatFechaEspanol = (dateStr) => {
+  if (!dateStr) return '';
+  if (typeof dateStr !== 'string') {
+    try {
+      dateStr = dateStr.toISOString();
+    } catch (e) {
+      return '';
+    }
+  }
+  if (dateStr.includes('de')) return dateStr;
+  try {
+    const cleanDate = dateStr.split('T')[0];
+    const parts = cleanDate.split('-');
+    if (parts.length === 3) {
+      const year = parts[0];
+      const monthIndex = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      const meses = [
+        "enero", "febrero", "marzo", "abril", "mayo", "junio",
+        "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+      ];
+      return `${day} de ${meses[monthIndex]} de ${year}`;
+    }
+  } catch (e) {
+    console.error(e);
+  }
+  return dateStr;
+};
+
 export const Vialidades = () => {
   // Estados para el Listado (Datatable)
   const [vialidades, setVialidades] = useState([]);
@@ -36,11 +65,8 @@ export const Vialidades = () => {
     concepto: 'EMPLEADO',
     conMarcaAgua: true,
     max_visualizaciones: 5,
-    fecha: new Date().toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
+    fecha: new Date().toISOString().split('T')[0],
+    fecha_expiracion: `${new Date().getFullYear()}-12-31`
   });
 
   const [llave, setLlave] = useState('');
@@ -48,9 +74,15 @@ export const Vialidades = () => {
 
   // Función para resetear/inicializar el formulario con llave nueva y limpia
   const resetForm = () => {
-    const randomNum = Math.floor(100000 + Math.random() * 900000);
-    const currentYear = new Date().getFullYear();
-    setLlave(`VIA-${currentYear}-${randomNum}`);
+    const now = new Date();
+    const YYYY = now.getFullYear();
+    const MM = String(now.getMonth() + 1).padStart(2, '0');
+    const DD = String(now.getDate()).padStart(2, '0');
+    const HH = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+    
+    setLlave(`VIA-${YYYY}-${MM}${DD}${HH}${mm}${ss}`);
     setData({
       numeroRecibo: '',
       distrito: 'SAN SALVADOR CENTRO',
@@ -58,11 +90,8 @@ export const Vialidades = () => {
       concepto: 'EMPLEADO',
       conMarcaAgua: true,
       max_visualizaciones: 5,
-      fecha: new Date().toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
+      fecha: new Date().toISOString().split('T')[0],
+      fecha_expiracion: `${YYYY}-12-31`
     });
   };
 
@@ -124,7 +153,8 @@ export const Vialidades = () => {
       solicitante: vialidadObj.nombre,
       concepto: vialidadObj.concepto,
       conMarcaAgua: vialidadObj.con_marca_agua,
-      fecha: vialidadObj.fecha_emision
+      fecha: vialidadObj.fecha_emision,
+      fecha_expiracion: vialidadObj.fecha_expiracion
     };
 
     const iframe = document.createElement('iframe');
@@ -175,7 +205,7 @@ export const Vialidades = () => {
         distrito: data.distrito || null,
         concepto: data.concepto,
         fecha_emision: data.fecha,
-        fecha_expiracion: `31 de diciembre de ${new Date().getFullYear()}`,
+        fecha_expiracion: `${new Date().getFullYear()}-12-31`,
         con_marca_agua: data.conMarcaAgua ?? true,
         max_visualizaciones: data.max_visualizaciones !== undefined ? data.max_visualizaciones : 5
       };
@@ -368,7 +398,7 @@ export const Vialidades = () => {
                               </Badge>
                             </td>
                             <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
-                              {v.fecha_emision}
+                              {formatFechaEspanol(v.fecha_emision)}
                             </td>
                             <td className="px-6 py-4 text-right">
                               <div className="flex justify-end gap-2">
@@ -503,7 +533,8 @@ export const Vialidades = () => {
                     solicitante: selectedVialidad.nombre,
                     concepto: selectedVialidad.concepto,
                     conMarcaAgua: selectedVialidad.con_marca_agua,
-                    fecha: selectedVialidad.fecha_emision
+                    fecha: selectedVialidad.fecha_emision,
+                    fecha_expiracion: selectedVialidad.fecha_expiracion
                   }}
                   llave={selectedVialidad.llave_unica}
                   qrUrl={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(

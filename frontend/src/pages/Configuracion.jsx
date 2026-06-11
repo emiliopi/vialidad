@@ -15,7 +15,8 @@ export const Configuracion = () => {
   const [cacheBuster, setCacheBuster] = useState(Date.now());
 
   // URL base del backend para servir los estáticos (firmas)
-  const backendBaseUrl = 'http://localhost:8000';
+  const apiVal = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+  const backendBaseUrl = apiVal.endsWith('/api') ? apiVal.substring(0, apiVal.length - 4) : apiVal;
 
   useEffect(() => {
     fetchConfiguracion();

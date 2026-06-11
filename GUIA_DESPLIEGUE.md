@@ -67,3 +67,26 @@ En el entorno de producción en Rocky Linux, se compilarán los bundles estátic
 ### Redirecciones de Seguridad
 * **Público (`frontend-public`)**: Cualquier intento de navegar a la raíz `/` o rutas inexistentes redirige permanentemente al validador (`/verificar`), ocultando cualquier pantalla de login interna.
 * **Privado (`frontend`)**: Exige autenticación JWT obligatoria en todas las rutas a través del componente `<ProtectedRoute />` del enrutador de React.
+
+---
+
+## 4. Requerimientos del Servidor de Producción (Generación de PDFs)
+
+Para que el backend pueda generar los archivos PDF de vialidad utilizando el diseño original idéntico al del navegador (HTML + Tailwind CSS), se requiere tener instalado **Chromium Headless** en el servidor Rocky Linux de producción.
+
+### Instrucciones de Instalación en Rocky Linux (Consola):
+
+1. **Habilitar el repositorio EPEL** (donde se hospeda el paquete de Chromium en Rocky Linux):
+   ```bash
+   sudo dnf install -y epel-release
+   ```
+
+2. **Instalar Chromium**:
+   ```bash
+   sudo dnf install -y chromium
+   ```
+   *Nota: Esta instalación resuelve de manera automática todas las librerías compartidas gráficas y fuentes requeridas por el motor de renderizado interno de Chromium, permitiéndole ejecutarse de forma invisible (headless) en servidores dedicados de consola.*
+
+3. **Verificación**:
+   Una vez instalado, el backend detectará de forma automática el binario en `/usr/bin/chromium-browser` para procesar la generación de boletas.
+

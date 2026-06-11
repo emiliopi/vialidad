@@ -14,6 +14,17 @@ BASE_DIR = Path(__file__).resolve().parents[3]
 STATIC_DIR = BACKEND_DIR / "static"
 PUBLIC_DIR = BASE_DIR / "frontend-public" / "public"
 
+# Descargar Tailwind CSS local si no existe para evitar peticiones de red lentas en headless Edge
+TAILWIND_CSS_PATH = STATIC_DIR / "tailwind.min.css"
+if not TAILWIND_CSS_PATH.exists():
+    try:
+        import urllib.request
+        url = "https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+        STATIC_DIR.mkdir(parents=True, exist_ok=True)
+        urllib.request.urlretrieve(url, TAILWIND_CSS_PATH)
+    except Exception:
+        pass
+
 def numero_a_letras(numero: float) -> str:
     """
     Convierte un número a su representación en letras en dólares y centavos.
@@ -59,6 +70,30 @@ def numero_a_letras(numero: float) -> str:
     except Exception:
         return f"{numero:.2f} DOLARES"
 
+def formatear_fecha_letras(d) -> str:
+    """
+    Convierte una fecha a formato en palabras en español (ej. "10 de junio de 2026").
+    """
+    if not d:
+        return "____________________"
+    if isinstance(d, str):
+        if "de" in d:
+            return d
+        try:
+            from dateutil.parser import parse
+            d = parse(d)
+        except Exception:
+            return d
+            
+    meses = [
+        "enero", "febrero", "marzo", "abril", "mayo", "junio",
+        "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+    ]
+    try:
+        return f"{d.day} de {meses[d.month - 1]} de {d.year}"
+    except Exception:
+        return str(d)
+
 def resolver_ruta_archivo(url_o_path: str) -> str:
     """
     Resuelve una URL relativa a una ruta de archivo local absoluta compatible con el navegador (URI file://).
@@ -80,10 +115,108 @@ def resolver_ruta_archivo(url_o_path: str) -> str:
         pass
     return ""
 
+def obtener_base64_imagen(ruta_o_url: str) -> str:
+    """
+    Lee un archivo local o URL y lo devuelve como una cadena Data URI en Base64.
+    """
+    if not ruta_o_url:
+        return ""
+    import base64 as b64
+    from urllib.parse import unquote
+    from urllib.request import url2pathname
+    
+    # Si es una URL de internet (http/https)
+    if ruta_o_url.startswith(("http://", "https://")):
+        try:
+            import urllib.request
+            with urllib.request.urlopen(ruta_o_url, timeout=3) as response:
+                content_type = response.headers.get("Content-Type", "image/png")
+                return f"data:{content_type};base64,{b64.b64encode(response.read()).decode('utf-8')}"
+        except Exception:
+            return ruta_o_url  # Retornar URL original como fallback
+            
+    # Si es un URI file://
+    path_str = ruta_o_url
+    if path_str.startswith("file:///"):
+        path_str = url2pathname(unquote(path_str.replace("file://", "")))
+    elif path_str.startswith("file://"):
+        path_str = url2pathname(unquote(path_str.replace("file:", "")))
+        
+    try:
+        p = Path(path_str)
+        if p.exists() and p.is_file():
+            ext = p.suffix.lower().replace(".", "")
+            mime = f"image/{ext}" if ext in ("png", "jpg", "jpeg", "gif") else "image/png"
+            if ext == "svg":
+                mime = "image/svg+xml"
+            with open(p, "rb") as f:
+                return f"data:{mime};base64,{b64.b64encode(f.read()).decode('utf-8')}"
+    except Exception:
+        pass
+        
+    return ruta_o_url
+
+def obtener_ruta_navegador() -> str:
+    """
+    Busca dinámicamente un navegador compatible con headless (Chrome, Chromium, Edge)
+    según el sistema operativo (Windows o Linux/Rocky).
+    """
+    import shutil
+    import platform
+
+    # Lista de nombres de ejecutables a buscar en el PATH del sistema
+    ejecutables = [
+        "microsoft-edge-stable",
+        "microsoft-edge",
+        "msedge",
+        "google-chrome-stable",
+        "google-chrome",
+        "chromium-browser",
+        "chromium",
+        "chrome"
+    ]
+    
+    # Intentar encontrar en el PATH
+    for exe in ejecutables:
+        path = shutil.which(exe)
+        if path:
+            return path
+            
+    # Rutas comunes si no están en el PATH
+    sistema = platform.system().lower()
+    if "windows" in sistema:
+        rutas_comunes = [
+            r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+            r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+        ]
+    else:  # Linux (Rocky/RHEL/etc.) o macOS
+        rutas_comunes = [
+            "/usr/bin/google-chrome",
+            "/usr/bin/google-chrome-stable",
+            "/usr/bin/chromium-browser",
+            "/usr/bin/chromium",
+            "/usr/bin/microsoft-edge",
+            "/usr/bin/microsoft-edge-stable",
+            "/usr/local/bin/google-chrome",
+            "/usr/local/bin/chromium"
+        ]
+        
+    for ruta in rutas_comunes:
+        if os.path.exists(ruta):
+            return ruta
+            
+    # Fallback predeterminado según el sistema
+    if "windows" in sistema:
+        return r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+    else:
+        return "/usr/bin/google-chrome"
+
 def generar_pdf_vialidad(vialidad: Vialidad, url_verificador: str = None) -> io.BytesIO:
     """
     Genera la boleta de vialidad oficial renderizando la plantilla HTML literal de impresión
-    de React utilizando Microsoft Edge Headless con soporte completo de tiempo virtual para scripts.
+    de React utilizando un navegador Headless compatible con soporte completo de tiempo virtual.
     """
     # 1. Definir rutas absolutas para imágenes de logos
     logo_path = (PUBLIC_DIR / "logo.png").as_uri()
@@ -98,16 +231,27 @@ def generar_pdf_vialidad(vialidad: Vialidad, url_verificador: str = None) -> io.
     if not firma_secretario_url:
         firma_secretario_url = (PUBLIC_DIR / "firma_secretario.png").as_uri()
 
+    # 2.5 Resolver Tailwind CSS
+    tailwind_css = TAILWIND_CSS_PATH.as_uri() if TAILWIND_CSS_PATH.exists() else "https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+
     # 3. Generar URL de verificación para el QR
     base_validator_url = url_verificador or settings.VALIDATOR_URL
     verification_data = f"{base_validator_url}/verificar/{vialidad.llave_unica}"
     qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={urllib.parse.quote(verification_data)}"
     
+    # 3.5 Convertir todas las imágenes a Base64 inline para que la página sea 100% autocontenida y cargue al instante
+    logo_base64 = obtener_base64_imagen(logo_path)
+    logo_card_base64 = obtener_base64_imagen(logo_card_path)
+    firma_alcalde_base64 = obtener_base64_imagen(firma_alcalde_url)
+    firma_secretario_base64 = obtener_base64_imagen(firma_secretario_url)
+    qr_base64 = obtener_base64_imagen(qr_url)
+    
     # 4. Preparar textos y variables
     distrito = vialidad.distrito or "&nbsp;"
     solicitante = vialidad.nombre or "&nbsp;"
     concepto = vialidad.concepto or "&nbsp;"
-    fecha = vialidad.fecha_emision or "____________________"
+    fecha = formatear_fecha_letras(vialidad.fecha_emision)
+    fecha_exp = formatear_fecha_letras(vialidad.fecha_expiracion)
     monto_letras = numero_a_letras(vialidad.precio_vialidad)
     
     current_year = datetime.now().year
@@ -121,7 +265,7 @@ def generar_pdf_vialidad(vialidad: Vialidad, url_verificador: str = None) -> io.
         for _ in range(48):
             watermark_html += f"""
             <div class="watermark-content">
-              <img src="{logo_path}" class="watermark-logo" alt="" />
+              <img src="{logo_base64}" class="watermark-logo" alt="" />
               <div class="watermark-line"></div>
               <div class="watermark-text-group">
                 <span class="wt-min">MINISTERIO</span>
@@ -268,7 +412,7 @@ def generar_pdf_vialidad(vialidad: Vialidad, url_verificador: str = None) -> io.
           </div>
 
           <div class="flex items-center gap-2">
-            <img src="{logo_path}" alt="Escudo El Salvador" class="w-9 h-9 object-contain" />
+            <img src="{logo_base64}" alt="Escudo El Salvador" class="w-9 h-9 object-contain" />
             <div class="h-8 border-l border-sky-300/80 mx-1"></div>
             <div class="text-left leading-none">
               <p class="text-[13px] font-bold tracking-wide text-sky-700 uppercase">Ministerio</p>
@@ -332,7 +476,7 @@ def generar_pdf_vialidad(vialidad: Vialidad, url_verificador: str = None) -> io.
           <div class="relative flex flex-col items-center pt-4">
             <!-- Imagen de Firma Real -->
             <img 
-              src="{firma_alcalde_url}" 
+              src="{firma_alcalde_base64}" 
               alt="Firma Alcalde" 
               class="absolute -top-12 w-48 h-24 object-contain opacity-90"
               onerror="this.style.display='none';" 
@@ -346,14 +490,14 @@ def generar_pdf_vialidad(vialidad: Vialidad, url_verificador: str = None) -> io.
           <div class="text-center space-y-0.5">
             <span class="text-[10px] uppercase tracking-wider text-sky-600 font-bold">Fecha de Expiración</span>
             <p class="text-sm font-black text-sky-900 underline decoration-sky-300 decoration-2">
-              31 de diciembre de {current_year}
+              {fecha_exp}
             </p>
           </div>
 
           <div class="relative flex flex-col items-center pt-4">
             <!-- Imagen de Firma Real -->
             <img 
-              src="{firma_secretario_url}" 
+              src="{firma_secretario_base64}" 
               alt="Firma Secretario" 
               class="absolute -top-12 w-48 h-24 object-contain opacity-90"
               onerror="this.style.display='none';" 
@@ -372,14 +516,14 @@ def generar_pdf_vialidad(vialidad: Vialidad, url_verificador: str = None) -> io.
           <p class="text-[10px] font-mono font-black text-sky-900 tracking-wider">Llave Única: {vialidad.llave_unica}</p>
           
           <div class="flex flex-col items-center pt-2">
-            <img src="{qr_url}" alt="Código QR de Verificación" class="w-32 h-32 border border-sky-200 p-1 bg-white rounded-lg shadow-sm" />
+            <img src="{qr_base64}" alt="Código QR de Verificación" class="w-32 h-32 border border-sky-200 p-1 bg-white rounded-lg shadow-sm" />
             <p class="text-[8px] font-mono text-sky-700 mt-1">{verification_data}</p>
           </div>
         </div>
         
         <!-- Derecha: Logo de Tarjeta (En grande) -->
         <div class="flex items-center">
-          <img src="{logo_card_path}" alt="Logo Card" class="w-56 h-32 object-contain" />
+          <img src="{logo_card_base64}" alt="Logo Card" class="w-56 h-32 object-contain" />
         </div>
       </div>
 
@@ -406,15 +550,18 @@ def generar_pdf_vialidad(vialidad: Vialidad, url_verificador: str = None) -> io.
         with open(html_temp_path, "w", encoding="utf-8") as f:
             f.write(html_content)
             
-        # 8. Ejecutar Microsoft Edge de forma headless con un virtual-time-budget
-        # para esperar a que cargue Tailwind CSS CDN y las Google Fonts.
-        edge_path = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"
+        # 8. Ejecutar navegador headless dinámicamente con un virtual-time-budget mínimo
+        # ya que todos los estilos y recursos ahora son locales y estáticos.
+        navegador_path = obtener_ruta_navegador()
         cmd = [
-            edge_path,
+            navegador_path,
             "--headless",
             "--disable-gpu",
+            "--no-sandbox",
+            "--disable-web-security",
+            "--allow-file-access-from-files",
             "--print-to-pdf-no-header",
-            "--virtual-time-budget=10000",
+            "--virtual-time-budget=1000",
             f"--print-to-pdf={pdf_temp_path}",
             html_temp_path
         ]

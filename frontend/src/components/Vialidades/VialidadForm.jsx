@@ -25,7 +25,11 @@ export const VialidadForm = ({ data, onChange }) => {
   }, []);
 
   const handleChange = (key, value) => {
-    onChange({ ...data, [key]: value });
+    let finalValue = value;
+    if (typeof value === 'string' && key !== 'fecha') {
+      finalValue = value.toUpperCase();
+    }
+    onChange({ ...data, [key]: finalValue });
   };
 
   return (

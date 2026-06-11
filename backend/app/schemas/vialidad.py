@@ -3,13 +3,13 @@ from datetime import datetime
 from typing import Optional
 
 class VialidadBase(BaseModel):
-    llave_unica: str = Field(..., max_length=50)
+    llave_unica: Optional[str] = Field(None, max_length=50)
     numero_recibo: str = Field(..., max_length=50)
     nombre: str = Field(..., max_length=255)
     distrito: Optional[str] = Field(None, max_length=255)
     concepto: str = Field(..., max_length=255)
-    fecha_emision: str = Field(..., max_length=50)
-    fecha_expiracion: str = Field(..., max_length=50)
+    fecha_emision: datetime
+    fecha_expiracion: datetime
     con_marca_agua: bool = Field(True)
     max_visualizaciones: int = Field(5, ge=1)
 
