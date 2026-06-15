@@ -29,6 +29,13 @@ class VialidadResponse(VialidadBase):
     precio_vialidad: Optional[float] = None
     firma_alcalde_url: Optional[str] = None
     firma_secretario_url: Optional[str] = None
+    
+    # Control de Impresión
+    impreso: bool
+    veces_impresa: int
+    fecha_ultima_impresion: Optional[datetime] = None
+    codigo_usuario_ultima_impresion: Optional[int] = None
+    codigo_lote: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -67,3 +74,7 @@ class VialidadBulkResponse(BaseModel):
     """Respuesta de la carga masiva con los registros creados."""
     total_creados: int
     items: List[VialidadResponse]
+
+
+class RegisterBulkPrint(BaseModel):
+    codigos: List[int]

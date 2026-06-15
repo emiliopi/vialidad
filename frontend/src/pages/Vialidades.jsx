@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import DashboardLayout from '../components/Layout/DashboardLayout';
-import { Button, Modal, Badge, Skeleton } from '../components/Common';
+import { Button, Modal, Badge, Skeleton, Tooltip, Select } from '../components/Common';
 import { VialidadForm } from '../components/Vialidades/VialidadForm';
 import { VialidadDocument } from '../components/Vialidades/VialidadDocument';
 import { getVialidadPrintTemplate } from '../utils/VialidadPrintTemplate';
 import { vialidadService } from '../api/vialidadService';
 import { configuracionService } from '../api/configuracionService';
+import { distritoService } from '../api/distritoService';
+import { conceptoService } from '../api/conceptoService';
 import { BulkImportModal } from '../components/Vialidades/BulkImportModal';
 
 export const formatFechaEspanol = (dateStr) => {
@@ -45,6 +47,10 @@ export const Vialidades = () => {
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [search, setSearch] = useState('');
+  const [filterDistrito, setFilterDistrito] = useState('');
+  const [filterConcepto, setFilterConcepto] = useState('');
+  const [distritosList, setDistritosList] = useState([]);
+  const [conceptosList, setConceptosList] = useState([]);
   const [total, setTotal] = useState(0);
   const [isCreating, setIsCreatingState] = useState(() => sessionStorage.getItem('vialidad_is_creating') === 'true');
   const setIsCreating = (val) => {
@@ -82,6 +88,13 @@ export const Vialidades = () => {
   const [llave, setLlave] = useState('');
   const [isPrinting, setIsPrinting] = useState(false);
   const [vialidadTemplate, setVialidadTemplate] = useState('');
+  const [printConfirm, setPrintConfirm] = useState({
+    isOpen: false,
+    codigoVialidad: null,
+    codigos: null,
+    title: 'Confirmar Impresión',
+    message: '¿Se imprimió la boleta de vialidad correctamente?'
+  });
 
   // Función para obtener/cargar la plantilla HTML única
   const getTemplateContent = async () => {
@@ -127,7 +140,7 @@ export const Vialidades = () => {
   const fetchVialidades = async () => {
     setLoading(true);
     try {
-      const resData = await vialidadService.getVialidades(page, limit, search);
+      const resData = await vialidadService.getVialidades(page, limit, search, filterDistrito, filterConcepto);
       setVialidades(resData.items || []);
       setTotal(resData.total || 0);
     } catch (err) {
@@ -143,7 +156,7 @@ export const Vialidades = () => {
     if (!isCreating) {
       fetchVialidades();
     }
-  }, [page, limit, search, isCreating]);
+  }, [page, limit, search, filterDistrito, filterConcepto, isCreating]);
 
   const loadConfig = async () => {
     try {
@@ -164,6 +177,19 @@ export const Vialidades = () => {
     resetForm();
     loadConfig();
     getTemplateContent();
+
+    const loadFiltersData = async () => {
+      try {
+        const distRes = await distritoService.getDistritos(1, 100);
+        setDistritosList((distRes.items || []).filter(d => d.activo));
+
+        const concRes = await conceptoService.getConceptos(1, 100);
+        setConceptosList((concRes.items || []).filter(c => c.activo));
+      } catch (err) {
+        console.error("Error al cargar datos de filtros:", err);
+      }
+    };
+    loadFiltersData();
   }, []);
 
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
@@ -207,6 +233,15 @@ export const Vialidades = () => {
     doc.write(htmlContent);
     doc.close();
 
+    iframe.contentWindow.addEventListener('afterprint', () => {
+      setPrintConfirm({
+        isOpen: true,
+        codigoVialidad: vialidadObj.codigo_vialidad,
+        title: 'Confirmar Reimpresión',
+        message: '¿Se imprimió la boleta de vialidad correctamente?'
+      });
+    });
+
     setTimeout(() => {
       try {
         iframe.contentWindow.focus();
@@ -219,6 +254,155 @@ export const Vialidades = () => {
         }
       }
     }, 1500);
+  };
+
+  // Reimprimir lote completo de carga masiva
+  const handlePrintLote = async (codigoLote) => {
+    const loadToast = toast.loading(`Obteniendo boletas del lote ${codigoLote}...`);
+    try {
+      const loteItems = await vialidadService.getVialidadesLote(codigoLote);
+      if (!loteItems || loteItems.length === 0) {
+        toast.error('El lote no contiene registros.', { id: loadToast });
+        return;
+      }
+
+      toast.loading('Generando lote de boletas para impresión...', { id: loadToast });
+
+      const templateHtml = await getTemplateContent();
+      const firstHtml = getVialidadPrintTemplate(
+        templateHtml,
+        {
+          numeroRecibo: loteItems[0].numero_recibo,
+          distrito: loteItems[0].distrito,
+          solicitante: loteItems[0].nombre,
+          concepto: loteItems[0].concepto,
+          fecha: loteItems[0].fecha_emision,
+          fecha_expiracion: loteItems[0].fecha_expiracion
+        },
+        loteItems[0].llave_unica,
+        `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+          configUrlVerificador + '/verificar/' + loteItems[0].llave_unica
+        )}`,
+        loteItems[0].con_marca_agua,
+        loteItems[0].precio_vialidad !== undefined && loteItems[0].precio_vialidad !== null ? loteItems[0].precio_vialidad : configPrecio,
+        loteItems[0].firma_alcalde_url || configAlcaldeFirma,
+        loteItems[0].firma_secretario_url || configSecretarioFirma
+      );
+
+      const parser = new DOMParser();
+      const combinedDoc = parser.parseFromString(firstHtml, 'text/html');
+      const body = combinedDoc.body;
+      body.innerHTML = ''; // Limpiar el contenido del primero
+
+      // Generar y agregar cada boleta
+      loteItems.forEach((v) => {
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+          configUrlVerificador + '/verificar/' + v.llave_unica
+        )}`;
+
+        const printData = {
+          numeroRecibo: v.numero_recibo,
+          distrito: v.distrito,
+          solicitante: v.nombre,
+          concepto: v.concepto,
+          fecha: v.fecha_emision,
+          fecha_expiracion: v.fecha_expiracion
+        };
+
+        const printPrecio = v.precio_vialidad !== undefined && v.precio_vialidad !== null ? v.precio_vialidad : configPrecio;
+        const printAlcalde = v.firma_alcalde_url || configAlcaldeFirma;
+        const printSecretario = v.firma_secretario_url || configSecretarioFirma;
+
+        const html = getVialidadPrintTemplate(
+          templateHtml,
+          printData,
+          v.llave_unica,
+          qrUrl,
+          v.con_marca_agua,
+          printPrecio,
+          printAlcalde,
+          printSecretario
+        );
+
+        const doc = parser.parseFromString(html, 'text/html');
+        const container = doc.querySelector('.ticket-container');
+        if (container) {
+          body.appendChild(combinedDoc.importNode(container, true));
+        }
+      });
+
+      // Añadir estilos para el salto de página e impresión
+      const style = combinedDoc.createElement('style');
+      style.textContent = `
+        @page {
+          size: letter !important;
+          margin: 1cm !important;
+        }
+        body {
+          padding: 0 !important;
+          margin: 0 !important;
+          background-color: white !important;
+        }
+        .ticket-container {
+          page-break-after: always !important;
+          break-after: page !important;
+          margin: 0 auto !important;
+          box-shadow: none !important;
+          border: 1px solid #bae6fd !important;
+        }
+        .ticket-container:last-child {
+          page-break-after: avoid !important;
+          break-after: avoid !important;
+        }
+      `;
+      combinedDoc.head.appendChild(style);
+
+      // Crear un iframe invisible para mandar a imprimir directamente
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+
+      const combinedHtml = new XMLSerializer().serializeToString(combinedDoc);
+      const doc = iframe.contentDocument || iframe.contentWindow.document;
+      doc.open();
+      doc.write(combinedHtml);
+      doc.close();
+
+      const codes = loteItems.map(item => item.codigo_vialidad);
+      iframe.contentWindow.addEventListener('afterprint', () => {
+        setPrintConfirm({
+          isOpen: true,
+          codigoVialidad: null,
+          codigos: codes,
+          title: 'Confirmar Impresión de Lote',
+          message: `¿Se imprimieron las ${codes.length} boletas de este lote correctamente?`
+        });
+      });
+
+      setTimeout(() => {
+        try {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+          toast.dismiss(loadToast);
+        } catch (err) {
+          console.error("Error al imprimir lote:", err);
+          toast.error("Error al abrir diálogo de impresión.", { id: loadToast });
+        } finally {
+          if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+          }
+        }
+      }, 1500);
+
+    } catch (err) {
+      console.error(err);
+      toast.error('Error al recuperar boletas del lote.', { id: loadToast });
+    }
   };
 
   // Crear y guardar un nuevo registro de vialidad
@@ -281,6 +465,15 @@ export const Vialidades = () => {
       doc.open();
       doc.write(htmlContent);
       doc.close();
+
+      iframe.contentWindow.addEventListener('afterprint', () => {
+        setPrintConfirm({
+          isOpen: true,
+          codigoVialidad: savedVialidad.codigo_vialidad,
+          title: 'Confirmar Impresión',
+          message: '¿Se imprimió la boleta de vialidad correctamente?'
+        });
+      });
 
       // Pequeño delay de 1.5 segundos para garantizar que carguen los estilos CDN y el logo
       setTimeout(() => {
@@ -384,19 +577,53 @@ export const Vialidades = () => {
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row gap-4 items-center">
               <div className="relative w-full flex-1">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-5 h-5">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.637 10.637z" />
                   </svg>
                 </div>
-                <input
+                 <input
                   type="text"
-                  placeholder="Buscar por contribuyente, número de recibo o llave única..."
+                  placeholder="Buscar por contribuyente, llave única, recibo o fecha (AAAA-MM-DD)..."
                   value={search}
                   onChange={(e) => {
                     setSearch(e.target.value);
                     setPage(1); // Reiniciar paginación al filtrar
                   }}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-sm text-slate-805 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                />
+              </div>
+
+              {/* Filtro por Distrito */}
+              <div className="w-full md:w-64">
+                <Select
+                  value={filterDistrito}
+                  onChange={(e) => {
+                    setFilterDistrito(e.target.value);
+                    setPage(1);
+                  }}
+                  placeholder="Todos los distritos"
+                  searchable={true}
+                  options={[
+                    { value: '', label: 'Todos los distritos' },
+                    ...distritosList.map((d) => ({ value: d.nombre, label: d.nombre }))
+                  ]}
+                />
+              </div>
+
+              {/* Filtro por Concepto */}
+              <div className="w-full md:w-64">
+                <Select
+                  value={filterConcepto}
+                  onChange={(e) => {
+                    setFilterConcepto(e.target.value);
+                    setPage(1);
+                  }}
+                  placeholder="Todos los conceptos"
+                  searchable={true}
+                  options={[
+                    { value: '', label: 'Todos los conceptos' },
+                    ...conceptosList.map((c) => ({ value: c.nombre, label: c.nombre }))
+                  ]}
                 />
               </div>
             </div>
@@ -419,15 +646,13 @@ export const Vialidades = () => {
                 <>
                   {/* Vista de Tabla para Escritorio */}
                   <div className="hidden md:block overflow-x-auto">
-                    <table className="w-full border-collapse text-left text-sm text-slate-700 dark:text-slate-300">
+                    <table className="w-full border-collapse text-left text-sm">
                       <thead>
                         <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                           <th className="px-6 py-4">Nº Recibo</th>
-                          <th className="px-6 py-4">Contribuyente</th>
-                          <th className="px-6 py-4">Distrito</th>
+                          <th className="px-6 py-4">Contribuyente / Distrito</th>
                           <th className="px-6 py-4">Concepto</th>
-                          <th className="px-6 py-4">Llave Única</th>
-                          <th className="px-6 py-4">Visualizaciones</th>
+                          <th className="px-6 py-4">Llave / Visualizaciones</th>
                           <th className="px-6 py-4">Fecha Emisión</th>
                           <th className="px-6 py-4 text-right">Acciones</th>
                         </tr>
@@ -438,40 +663,68 @@ export const Vialidades = () => {
                             <td className="px-6 py-4 font-bold text-slate-900 dark:text-slate-100">
                               {v.numero_recibo}
                             </td>
-                            <td className="px-6 py-4 font-semibold text-slate-850 dark:text-slate-200">
-                              {v.nombre}
+                            <td className="px-6 py-4">
+                              <div className="flex flex-col">
+                                <span className="font-semibold text-slate-800 dark:text-slate-200">{v.nombre}</span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{v.distrito || '—'}</span>
+                                {v.codigo_lote && (
+                                  <span className="inline-flex items-center gap-1 text-[10px] text-primary dark:text-sky-400 font-bold mt-1" title="Creado en carga masiva">
+                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                    </svg>
+                                    {v.codigo_lote}
+                                  </span>
+                                )}
+                              </div>
                             </td>
-                            <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
-                              {v.distrito || '-'}
-                            </td>
-                            <td className="px-6 py-4 text-slate-600 dark:text-slate-400 text-xs uppercase">
+                            <td className="px-6 py-4 text-slate-600 dark:text-slate-400 text-xs uppercase font-medium">
                               {v.concepto}
                             </td>
-                            <td className="px-6 py-4 font-mono text-xs text-sky-700 dark:text-sky-400">
-                              {v.llave_unica}
-                            </td>
                             <td className="px-6 py-4">
-                              <Badge variant={v.visualizaciones_restantes > 0 ? 'success' : 'danger'}>
-                                {v.visualizaciones_restantes} / {v.max_visualizaciones} rest.
-                              </Badge>
+                              <div className="flex flex-col gap-1.5">
+                                <span className="font-mono text-[10px] text-sky-700 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40 px-2 py-0.5 rounded w-fit">
+                                  {v.llave_unica}
+                                </span>
+                                <div className="flex items-center">
+                                  <Badge variant={v.visualizaciones_restantes > 0 ? 'success' : 'danger'}>
+                                    {v.visualizaciones_restantes} / {v.max_visualizaciones} rest.
+                                  </Badge>
+                                </div>
+                              </div>
                             </td>
-                            <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
+                            <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs font-medium">
                               {formatFechaEspanol(v.fecha_emision)}
                             </td>
                             <td className="px-6 py-4 text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => openPreviewModal(v)}
-                                  className="flex items-center gap-1.5"
-                                >
-                                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-4 h-4">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                  </svg>
-                                  Previsualizar
-                                </Button>
+                              <div className="flex flex-col gap-1 items-end">
+                                {v.codigo_lote && (
+                                  <Tooltip content="Imprimir lote completo" position="left">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handlePrintLote(v.codigo_lote)}
+                                      className="p-1 px-2 border-primary/45 hover:bg-primary/5 text-primary hover:!text-primary flex items-center gap-1 text-[10px] w-24 justify-start font-bold"
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0a2.25 2.25 0 01-2.24 2.24H8.58A2.25 2.25 0 016.34 18m11.32-4.171C19.09 13.692 20 12.43 20 11a4 4 0 00-4-4H8a4 4 0 00-4 4c0 1.43.91 2.692 2.22 2.829m12.36 0L17.66 18m-11.32 0L6.34 18M16 3H8M16 7H8" />
+                                      </svg>
+                                      Lote
+                                    </Button>
+                                  </Tooltip>
+                                )}
+                                <Tooltip content="Imprimir boleta individual" position="left">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handlePrintExisting(v)}
+                                    className="p-1 px-2 border-emerald-500/30 hover:!bg-emerald-50 text-emerald-600 hover:!text-emerald-600 dark:border-emerald-500/20 dark:hover:!bg-emerald-950/20 dark:text-emerald-400 dark:hover:!text-emerald-400 flex items-center gap-1 text-[10px] w-24 justify-start font-bold"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0a2.25 2.25 0 01-2.24 2.24H8.58A2.25 2.25 0 016.34 18m11.32-4.171C19.09 13.692 20 12.43 20 11a4 4 0 00-4-4H8a4 4 0 00-4 4c0 1.43.91 2.692 2.22 2.829m12.36 0L17.66 18m-11.32 0L6.34 18M16 3H8M16 7H8" />
+                                    </svg>
+                                    Individual
+                                  </Button>
+                                </Tooltip>
                               </div>
                             </td>
                           </tr>
@@ -495,7 +748,14 @@ export const Vialidades = () => {
                         </div>
                         <div>
                           <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium uppercase tracking-wider">Contribuyente</p>
-                          <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm">{v.nombre}</p>
+                          <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm flex items-center gap-1.5 flex-wrap">
+                            <span>{v.nombre}</span>
+                            {v.codigo_lote && (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[9px] font-bold">
+                                {v.codigo_lote}
+                              </span>
+                            )}
+                          </p>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div>
@@ -511,18 +771,36 @@ export const Vialidades = () => {
                           <span className="font-mono text-[10px] text-sky-700 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/50 px-2 py-1 rounded">
                             {v.llave_unica}
                           </span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openPreviewModal(v)}
-                            className="flex items-center gap-1.5 py-1 px-2.5 text-xs"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-3.5 h-3.5">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                            Previsualizar
-                          </Button>
+                          <div className="flex gap-2">
+                            {v.codigo_lote && (
+                              <Tooltip content="Imprimir lote completo" position="top">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handlePrintLote(v.codigo_lote)}
+                                  className="flex items-center gap-1 py-1 px-2 text-xs border-primary/45 text-primary hover:text-primary hover:bg-primary/5 font-bold"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0a2.25 2.25 0 01-2.24 2.24H8.58A2.25 2.25 0 016.34 18m11.32-4.171C19.09 13.692 20 12.43 20 11a4 4 0 00-4-4H8a4 4 0 00-4 4c0 1.43.91 2.692 2.22 2.829m12.36 0L17.66 18m-11.32 0L6.34 18M16 3H8M16 7H8" />
+                                  </svg>
+                                  Lote
+                                </Button>
+                              </Tooltip>
+                            )}
+                            <Tooltip content="Imprimir boleta individual" position="top">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handlePrintExisting(v)}
+                                className="flex items-center gap-1.5 py-1 px-2.5 text-xs border-emerald-500/30 hover:!bg-emerald-50 text-emerald-600 hover:!text-emerald-600 dark:border-emerald-500/20 dark:hover:!bg-emerald-950/20 dark:text-emerald-400 dark:hover:!text-emerald-400 font-bold"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0a2.25 2.25 0 01-2.24 2.24H8.58A2.25 2.25 0 016.34 18m11.32-4.171C19.09 13.692 20 12.43 20 11a4 4 0 00-4-4H8a4 4 0 00-4 4c0 1.43.91 2.692 2.22 2.829m12.36 0L17.66 18m-11.32 0L6.34 18M16 3H8M16 7H8" />
+                                </svg>
+                                Individual
+                              </Button>
+                            </Tooltip>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -619,6 +897,72 @@ export const Vialidades = () => {
         configSecretarioFirma={configSecretarioFirma}
         configUrlVerificador={configUrlVerificador}
       />
+
+      {/* Modal de Confirmación de Impresión */}
+      <Modal
+        isOpen={printConfirm.isOpen}
+        onClose={() => setPrintConfirm(prev => ({ ...prev, isOpen: false, codigoVialidad: null, codigos: null }))}
+        title={printConfirm.title}
+        size="md"
+        footer={
+          <div className="flex justify-end gap-2 w-full">
+            <Button 
+              variant="outline" 
+              onClick={() => setPrintConfirm(prev => ({ ...prev, isOpen: false, codigoVialidad: null, codigos: null }))}
+              size="sm"
+            >
+              No, cancelar
+            </Button>
+            <Button 
+              variant="primary" 
+              onClick={async () => {
+                const cod = printConfirm.codigoVialidad;
+                const batch = printConfirm.codigos;
+                setPrintConfirm(prev => ({ ...prev, isOpen: false, codigoVialidad: null, codigos: null }));
+                if (cod) {
+                  try {
+                    await vialidadService.registrarImpresion(cod);
+                    fetchVialidades();
+                    toast.success('Impresión registrada correctamente.');
+                  } catch (e) {
+                    console.error(e);
+                    toast.error('Error al registrar la impresión.');
+                  }
+                } else if (batch && batch.length > 0) {
+                  try {
+                    await vialidadService.registrarImpresionLote(batch);
+                    fetchVialidades();
+                    toast.success('Impresión de lote registrada correctamente.');
+                  } catch (e) {
+                    console.error(e);
+                    toast.error('Error al registrar la impresión de lote.');
+                  }
+                }
+              }}
+              size="sm"
+            >
+              Sí, se imprimió
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3 py-2">
+          <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-2">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0a2.25 2.25 0 01-2.24 2.24H8.58A2.25 2.25 0 016.34 18m11.32-4.171C19.09 13.692 20 12.43 20 11a4 4 0 00-4-4H8a4 4 0 00-4 4c0 1.43.91 2.692 2.22 2.829m12.36 0L17.66 18m-11.32 0L6.34 18M16 3H8M16 7H8" />
+            </svg>
+          </div>
+          <p className="text-sm text-slate-600 dark:text-slate-300 text-center font-medium">
+            {printConfirm.message}
+          </p>
+          <p className="text-xs text-slate-400 text-center">
+            {printConfirm.codigos && printConfirm.codigos.length > 0 
+              ? `Esta acción sumará al contador de impresiones de las ${printConfirm.codigos.length} boletas de este lote.`
+              : 'Esta acción sumará al contador de impresiones y registrará tu usuario en la auditoría física del documento.'
+            }
+          </p>
+        </div>
+      </Modal>
 
     </DashboardLayout>
   );

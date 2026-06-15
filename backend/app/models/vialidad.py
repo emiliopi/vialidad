@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import Optional
 from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, Boolean, Numeric
 from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
@@ -20,6 +21,13 @@ class Vialidad(Base):
     con_marca_agua: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     max_visualizaciones: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
     visualizaciones_restantes: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
+    
+    # Control de Impresión
+    impreso: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    veces_impresa: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    fecha_ultima_impresion: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    codigo_usuario_ultima_impresion: Mapped[Optional[int]] = mapped_column(BigInteger, ForeignKey("USUARIOS.codigo_usuario"), nullable=True)
+    codigo_lote: Mapped[Optional[str]] = mapped_column(String(50), nullable=True, index=True)
 
     # Campos de Auditoría
     codigo_usuario_creacion: Mapped[int] = mapped_column(BigInteger, ForeignKey("USUARIOS.codigo_usuario"), nullable=False)

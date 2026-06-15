@@ -32,9 +32,9 @@ export const vialidadService = {
   /**
    * Obtiene el listado de vialidades emitidas de forma paginada.
    */
-  getVialidades: async (page = 1, limit = 10, search = '') => {
+  getVialidades: async (page = 1, limit = 10, search = '', distrito = '', concepto = '') => {
     const res = await api.get('/vialidades/', {
-      params: { page, limit, search }
+      params: { page, limit, search, distrito, concepto }
     });
     return res.data;
   },
@@ -56,6 +56,30 @@ export const vialidadService = {
     const res = await api.get('/vialidades/estadisticas', {
       params: { fecha_inicio: fechaInicio, fecha_fin: fechaFin }
     });
+    return res.data;
+  },
+
+  /**
+   * Registra el evento de impresión de una boleta de vialidad.
+   */
+  registrarImpresion: async (codigoVialidad) => {
+    const res = await api.post(`/vialidades/${codigoVialidad}/registrar-impresion`);
+    return res.data;
+  },
+
+  /**
+   * Registra el evento de impresión para un lote de boletas.
+   */
+  registrarImpresionLote: async (codigos) => {
+    const res = await api.post('/vialidades/registrar-impresion-lote', { codigos });
+    return res.data;
+  },
+
+  /**
+   * Obtiene todas las vialidades pertenecientes a un lote.
+   */
+  getVialidadesLote: async (codigoLote) => {
+    const res = await api.get(`/vialidades/lotes/${codigoLote}`);
     return res.data;
   }
 };

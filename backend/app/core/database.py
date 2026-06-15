@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from app.core.config import settings
 import logging
@@ -39,6 +39,28 @@ def init_db() -> None:
         from app.models.distrito import Distrito
         from app.models.concepto import Concepto
         Base.metadata.create_all(bind=engine)
+        
+        # Verificar y agregar columnas de control de impresión si no existen (SQL Server)
+        with engine.connect() as conn:
+            for col_name, col_type in [
+                ("impreso", "BIT NOT NULL DEFAULT 0"),
+                ("veces_impresa", "INT NOT NULL DEFAULT 0"),
+                ("fecha_ultima_impresion", "DATETIME NULL"),
+                ("codigo_usuario_ultima_impresion", "BIGINT NULL FOREIGN KEY REFERENCES USUARIOS(codigo_usuario)"),
+                ("codigo_lote", "VARCHAR(50) NULL")
+            ]:
+                conn.execute(text(f"""
+                    IF NOT EXISTS (
+                        SELECT * FROM sys.columns 
+                        WHERE object_id = OBJECT_ID('VIALIDADES') 
+                        AND name = '{col_name}'
+                    )
+                    BEGIN
+                        ALTER TABLE VIALIDADES ADD {col_name} {col_type};
+                    END
+                """))
+            conn.commit()
+            
         logger.info("Base de datos inicializada correctamente.")
         
         # Ejecutamos la siembra automática de Roles (Super Admin, Admin) y sus respectivos usuarios por defecto

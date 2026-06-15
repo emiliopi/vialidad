@@ -41,6 +41,9 @@ export const BulkImportModal = ({ isOpen, onClose, onSuccess, configPrecio, conf
   const [distritos, setDistritos] = useState([]);
   const [conceptos, setConceptos] = useState([]);
   const [generatedHtmls, setGeneratedHtmls] = useState([]);
+  const [importedCodes, setImportedCodes] = useState([]);
+  const [printConfirm, setPrintConfirm] = useState({ isOpen: false, codes: [], message: '' });
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
 
   // ── Cargar distritos y conceptos del backend ───────────────────────────────
@@ -124,10 +127,7 @@ export const BulkImportModal = ({ isOpen, onClose, onSuccess, configPrecio, conf
   };
 
   // ── Parsear archivo Excel ──────────────────────────────────────────────────
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
+  const parseFile = (file) => {
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
@@ -152,6 +152,38 @@ export const BulkImportModal = ({ isOpen, onClose, onSuccess, configPrecio, conf
       }
     };
     reader.readAsArrayBuffer(file);
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    parseFile(file);
+  };
+
+  // Eventos de arrastrar y soltar
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+
+    const extension = file.name.split('.').pop().toLowerCase();
+    if (extension !== 'xlsx' && extension !== 'xls') {
+      toast.error('Formato no válido. Sube un archivo Excel (.xlsx o .xls)');
+      return;
+    }
+
+    parseFile(file);
   };
 
   // ── Importar y generar ZIP de PDFs ─────────────────────────────────────────
@@ -224,6 +256,7 @@ export const BulkImportModal = ({ isOpen, onClose, onSuccess, configPrecio, conf
         }
       }
       setGeneratedHtmls(allHtmls);
+      setImportedCodes(result.items.map(v => v.codigo_vialidad));
 
       toast.success('Boletas listas para impresión.', { id: generatingToast });
       setStep(3);
@@ -260,8 +293,12 @@ export const BulkImportModal = ({ isOpen, onClose, onSuccess, configPrecio, conf
     // Añadir estilos para el salto de página e impresión
     const style = combinedDoc.createElement('style');
     style.textContent = `
+      @page {
+        size: letter !important;
+        margin: 1cm !important;
+      }
       body {
-        padding: 1cm !important;
+        padding: 0 !important;
         margin: 0 !important;
         background-color: white !important;
       }
@@ -295,6 +332,14 @@ export const BulkImportModal = ({ isOpen, onClose, onSuccess, configPrecio, conf
     doc.write(combinedHtml);
     doc.close();
 
+    iframe.contentWindow.addEventListener('afterprint', () => {
+      setPrintConfirm({
+        isOpen: true,
+        codes: importedCodes,
+        message: '¿Se imprimieron todas las boletas del lote correctamente?'
+      });
+    });
+
     const loadToast = toast.loading('Abriendo diálogo de impresión de lote...');
     setTimeout(() => {
       try {
@@ -317,6 +362,8 @@ export const BulkImportModal = ({ isOpen, onClose, onSuccess, configPrecio, conf
     setStep(1);
     setRows([]);
     setGeneratedHtmls([]);
+    setImportedCodes([]);
+    setPrintConfirm({ isOpen: false, codes: [], message: '' });
     setImporting(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
     onClose();
@@ -361,7 +408,7 @@ export const BulkImportModal = ({ isOpen, onClose, onSuccess, configPrecio, conf
                 ) : (
                   <><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                  </svg> Importar {validCount} registros y descargar ZIP</>
+                  </svg> Importar {validCount} registros</>
                 )}
               </Button>
             </div>
@@ -397,11 +444,22 @@ export const BulkImportModal = ({ isOpen, onClose, onSuccess, configPrecio, conf
 
           <label className="block cursor-pointer">
             <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleFileChange} className="hidden" />
-            <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-primary dark:hover:border-primary rounded-xl p-8 text-center transition-colors group">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600 group-hover:text-primary transition-colors mb-3">
+            <div 
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`border-2 border-dashed rounded-xl p-8 text-center transition-all group ${
+                isDragging 
+                  ? 'border-primary bg-primary/5 scale-[1.01]' 
+                  : 'border-slate-300 dark:border-slate-700 hover:border-primary dark:hover:border-primary'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={`w-10 h-10 mx-auto transition-colors mb-3 ${isDragging ? 'text-primary animate-bounce' : 'text-slate-300 dark:text-slate-600 group-hover:text-primary'}`}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
               </svg>
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Haz clic para seleccionar el archivo Excel</p>
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                {isDragging ? '¡Suelta el archivo aquí!' : 'Haz clic o arrastra aquí tu archivo Excel'}
+              </p>
               <p className="text-xs text-slate-400 mt-1">Formatos aceptados: .xlsx, .xls — Máximo 500 registros</p>
             </div>
           </label>
@@ -528,6 +586,57 @@ export const BulkImportModal = ({ isOpen, onClose, onSuccess, configPrecio, conf
           </div>
         </div>
       )}
+      <Modal
+        isOpen={printConfirm.isOpen}
+        onClose={() => setPrintConfirm({ isOpen: false, codes: [] })}
+        title="Confirmar Impresión del Lote"
+        size="md"
+        footer={
+          <div className="flex justify-end gap-2 w-full">
+            <Button 
+              variant="outline" 
+              onClick={() => setPrintConfirm({ isOpen: false, codes: [] })}
+              size="sm"
+            >
+              No, cancelar
+            </Button>
+            <Button 
+              variant="primary" 
+              onClick={async () => {
+                const currentCodes = printConfirm.codes;
+                setPrintConfirm({ isOpen: false, codes: [] });
+                if (currentCodes.length > 0) {
+                  try {
+                    await vialidadService.registrarImpresionLote(currentCodes);
+                    onSuccess?.();
+                    toast.success('Impresión del lote registrada correctamente.');
+                  } catch (e) {
+                    console.error(e);
+                    toast.error('Error al registrar la impresión del lote.');
+                  }
+                }
+              }}
+              size="sm"
+            >
+              Sí, se imprimieron
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3 py-2">
+          <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-2">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0a2.25 2.25 0 01-2.24 2.24H8.58A2.25 2.25 0 016.34 18m11.32-4.171C19.09 13.692 20 12.43 20 11a4 4 0 00-4-4H8a4 4 0 00-4 4c0 1.43.91 2.692 2.22 2.829m12.36 0L17.66 18m-11.32 0L6.34 18M16 3H8M16 7H8" />
+            </svg>
+          </div>
+          <p className="text-sm text-slate-600 dark:text-slate-300 text-center font-medium">
+            {printConfirm.message}
+          </p>
+          <p className="text-xs text-slate-400 text-center">
+            Esta acción sumará al contador de impresiones de las {printConfirm.codes.length} boletas de este lote.
+          </p>
+        </div>
+      </Modal>
     </Modal>
   );
 };

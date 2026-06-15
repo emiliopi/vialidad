@@ -2,13 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List
 import logging
 
 from app.api import deps
 from app.models.vialidad import Vialidad
 from app.models.user import User
-from app.schemas.vialidad import VialidadCreate, VialidadResponse, VialidadVerifyResponse, VialidadPaginationResponse, VialidadBulkCreate, VialidadBulkResponse
+from app.schemas.vialidad import VialidadCreate, VialidadResponse, VialidadVerifyResponse, VialidadPaginationResponse, VialidadBulkCreate, VialidadBulkResponse, RegisterBulkPrint
 from app.services.pdf_generator import generar_pdf_vialidad
 
 logger = logging.getLogger("app.api.v1.endpoints.vialidades")
@@ -255,13 +255,16 @@ def get_vialidades(
     current_user: User = Depends(deps.get_current_user),
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=10, ge=1, le=100),
-    search: str = Query(default="")
+    search: str = Query(default=""),
+    distrito: Optional[str] = Query(default=None),
+    concepto: Optional[str] = Query(default=None)
 ):
     """
     Lista las boletas de vialidad de forma paginada con buscador server-side.
     Requiere token JWT activo.
     """
     try:
+        from sqlalchemy import cast, String
         skip = (page - 1) * limit if page > 0 else 0
         query = db.query(Vialidad)
         
@@ -270,8 +273,15 @@ def get_vialidades(
             query = query.filter(
                 (Vialidad.nombre.ilike(search_filter)) |
                 (Vialidad.numero_recibo.ilike(search_filter)) |
-                (Vialidad.llave_unica.ilike(search_filter))
+                (Vialidad.llave_unica.ilike(search_filter)) |
+                (cast(Vialidad.fecha_emision, String).ilike(search_filter))
             )
+            
+        if distrito:
+            query = query.filter(Vialidad.distrito.ilike(distrito))
+            
+        if concepto:
+            query = query.filter(Vialidad.concepto.ilike(concepto))
             
         total = query.count()
         items = query.order_by(Vialidad.codigo_vialidad.desc()).offset(skip).limit(limit).all()
@@ -363,6 +373,7 @@ def create_vialidades_bulk(
     now = datetime.now()
     current_year = now.year
     default_fecha_expiracion = datetime(current_year, 12, 31, 23, 59, 59)
+    codigo_lote = f"LOTE-{now.strftime('%Y%m%d-%H%M%S')}"
 
     created_objects = []
     try:
@@ -390,7 +401,8 @@ def create_vialidades_bulk(
                 codigo_usuario_creacion=current_user.codigo_usuario,
                 precio_vialidad=precio,
                 firma_alcalde_url=alcalde_url,
-                firma_secretario_url=secretario_url
+                firma_secretario_url=secretario_url,
+                codigo_lote=codigo_lote
             )
             db.add(db_obj)
             db.flush()  # Obtener codigo_vialidad asignado por la BD
@@ -422,3 +434,63 @@ def create_vialidades_bulk(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error al procesar la carga masiva de vialidades."
         )
+
+
+@router.post("/{codigo_vialidad}/registrar-impresion", response_model=VialidadResponse)
+def registrar_impresion(
+    codigo_vialidad: int,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """
+    Registra el evento de impresión de una vialidad individual (incrementa contador, actualiza fecha y usuario).
+    """
+    vialidad = db.query(Vialidad).filter(Vialidad.codigo_vialidad == codigo_vialidad).first()
+    if not vialidad:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Vialidad no encontrada."
+        )
+    
+    vialidad.impreso = True
+    vialidad.veces_impresa += 1
+    vialidad.fecha_ultima_impresion = datetime.now()
+    vialidad.codigo_usuario_ultima_impresion = current_user.codigo_usuario
+    
+    db.commit()
+    db.refresh(vialidad)
+    return vialidad
+
+
+@router.post("/registrar-impresion-lote", response_model=List[VialidadResponse])
+def registrar_impresion_lote(
+    payload: RegisterBulkPrint,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """
+    Registra el evento de impresión para un lote de vialidades.
+    """
+    vialidades = db.query(Vialidad).filter(Vialidad.codigo_vialidad.in_(payload.codigos)).all()
+    now = datetime.now()
+    for v in vialidades:
+        v.impreso = True
+        v.veces_impresa += 1
+        v.fecha_ultima_impresion = now
+        v.codigo_usuario_ultima_impresion = current_user.codigo_usuario
+    db.commit()
+    for v in vialidades:
+        db.refresh(v)
+    return vialidades
+
+
+@router.get("/lotes/{codigo_lote}", response_model=List[VialidadResponse])
+def get_vialidades_lote(
+    codigo_lote: str,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """
+    Obtiene todas las vialidades pertenecientes a un lote específico.
+    """
+    return db.query(Vialidad).filter(Vialidad.codigo_lote == codigo_lote).all()
