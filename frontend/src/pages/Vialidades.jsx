@@ -7,6 +7,7 @@ import { VialidadDocument } from '../components/Vialidades/VialidadDocument';
 import { getVialidadPrintTemplate } from '../utils/VialidadPrintTemplate';
 import { vialidadService } from '../api/vialidadService';
 import { configuracionService } from '../api/configuracionService';
+import { BulkImportModal } from '../components/Vialidades/BulkImportModal';
 
 export const formatFechaEspanol = (dateStr) => {
   if (!dateStr) return '';
@@ -64,6 +65,7 @@ export const Vialidades = () => {
   // Estados para la Previsualización de un Registro Existente
   const [selectedVialidad, setSelectedVialidad] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
   // Estado del Formulario para Nueva Vialidad
   const [data, setData] = useState({
@@ -344,12 +346,20 @@ export const Vialidades = () => {
                 </Button>
               </div>
             ) : (
-              <Button variant="primary" onClick={() => { resetForm(); setIsCreating(true); }} className="flex items-center gap-2 shadow-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
-                Crear Vialidad
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setIsBulkModalOpen(true)} className="flex items-center gap-2 shadow-sm">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                  </svg>
+                  Carga Masiva
+                </Button>
+                <Button variant="primary" onClick={() => { resetForm(); setIsCreating(true); }} className="flex items-center gap-2 shadow-lg">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                  Crear Vialidad
+                </Button>
+              </div>
             )}
           </div>
         </div>
@@ -598,6 +608,18 @@ export const Vialidades = () => {
         </Modal>
 
       </div>
+
+      {/* Modal de Carga Masiva */}
+      <BulkImportModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        onSuccess={() => { fetchVialidades(); }}
+        configPrecio={configPrecio}
+        configAlcaldeFirma={configAlcaldeFirma}
+        configSecretarioFirma={configSecretarioFirma}
+        configUrlVerificador={configUrlVerificador}
+      />
+
     </DashboardLayout>
   );
 };

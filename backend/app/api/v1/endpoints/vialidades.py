@@ -8,7 +8,7 @@ import logging
 from app.api import deps
 from app.models.vialidad import Vialidad
 from app.models.user import User
-from app.schemas.vialidad import VialidadCreate, VialidadResponse, VialidadVerifyResponse, VialidadPaginationResponse
+from app.schemas.vialidad import VialidadCreate, VialidadResponse, VialidadVerifyResponse, VialidadPaginationResponse, VialidadBulkCreate, VialidadBulkResponse
 from app.services.pdf_generator import generar_pdf_vialidad
 
 logger = logging.getLogger("app.api.v1.endpoints.vialidades")
@@ -335,4 +335,90 @@ def get_vialidad_pdf(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error interno al generar el archivo PDF."
+        )
+
+
+@router.post("/bulk", response_model=VialidadBulkResponse, status_code=status.HTTP_201_CREATED)
+def create_vialidades_bulk(
+    payload: VialidadBulkCreate,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """
+    Registra múltiples vialidades en una sola transacción.
+    Genera llave_unica y numero_recibo secuencial para cada ítem.
+    Máx. 500 ítems por solicitud.
+    """
+    if not payload.items:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="La lista de ítems no puede estar vacía.")
+
+    from app.models.configuracion import ConfiguracionVialidad
+    import random
+
+    config = db.query(ConfiguracionVialidad).filter(ConfiguracionVialidad.id == 1).first()
+    precio = config.precio_vialidad if config else 3.43
+    alcalde_url = config.firma_alcalde_url if config else None
+    secretario_url = config.firma_secretario_url if config else None
+
+    now = datetime.now()
+    current_year = now.year
+    default_fecha_expiracion = datetime(current_year, 12, 31, 23, 59, 59)
+
+    created_objects = []
+    try:
+        for idx, item in enumerate(payload.items):
+            # Generar llave única evitando colisiones dentro del mismo batch
+            import time
+            timestamp_str = datetime.now().strftime("%m%d%H%M%S")
+            rand_suffix = random.randint(10, 99)
+            llave = f"VIA-{current_year}-{timestamp_str}{rand_suffix}{idx}"
+
+            fecha_emision = item.fecha_emision or datetime.now()
+            fecha_expiracion = item.fecha_expiracion or default_fecha_expiracion
+
+            db_obj = Vialidad(
+                llave_unica=llave.upper(),
+                numero_recibo="TEMP",
+                nombre=item.nombre.upper(),
+                distrito=item.distrito.upper() if item.distrito else None,
+                concepto=item.concepto.upper(),
+                fecha_emision=fecha_emision,
+                fecha_expiracion=fecha_expiracion,
+                con_marca_agua=item.con_marca_agua,
+                max_visualizaciones=item.max_visualizaciones,
+                visualizaciones_restantes=item.max_visualizaciones,
+                codigo_usuario_creacion=current_user.codigo_usuario,
+                precio_vialidad=precio,
+                firma_alcalde_url=alcalde_url,
+                firma_secretario_url=secretario_url
+            )
+            db.add(db_obj)
+            db.flush()  # Obtener codigo_vialidad asignado por la BD
+
+            # Calcular numero_recibo secuencial igual que la creación individual
+            ultimo = db.query(Vialidad).filter(
+                Vialidad.codigo_vialidad < db_obj.codigo_vialidad,
+                Vialidad.numero_recibo != "TEMP"
+            ).order_by(Vialidad.codigo_vialidad.desc()).first()
+
+            if ultimo and ultimo.numero_recibo and ultimo.numero_recibo.isdigit():
+                offset = int(ultimo.numero_recibo) - ultimo.codigo_vialidad
+            else:
+                offset = 100000
+
+            db_obj.numero_recibo = str(offset + db_obj.codigo_vialidad)
+            created_objects.append(db_obj)
+
+        db.commit()
+        for obj in created_objects:
+            db.refresh(obj)
+
+        return VialidadBulkResponse(total_creados=len(created_objects), items=created_objects)
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error en carga masiva de vialidades: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al procesar la carga masiva de vialidades."
         )

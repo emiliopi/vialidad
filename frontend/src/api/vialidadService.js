@@ -14,6 +14,14 @@ export const vialidadService = {
   },
 
   /**
+   * Registra múltiples vialidades en una sola transacción (máx. 500).
+   */
+  createVialidadesBulk: async (bulkPayload) => {
+    const res = await api.post('/vialidades/bulk', bulkPayload);
+    return res.data;
+  },
+
+  /**
    * Obtiene el siguiente número de recibo correlativo disponible.
    */
   getSiguienteRecibo: async () => {
