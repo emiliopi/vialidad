@@ -70,6 +70,23 @@ def numero_a_letras(numero: float) -> str:
     except Exception:
         return f"{numero:.2f} DOLARES"
 
+def formatear_fecha_puntos(d) -> str:
+    """
+    Convierte una fecha a formato DD.MM.YYYY.
+    """
+    if not d:
+        return ""
+    if isinstance(d, str):
+        try:
+            from dateutil.parser import parse
+            d = parse(d)
+        except Exception:
+            return d
+    try:
+        return f"{d.day:02d}.{d.month:02d}.{d.year}"
+    except Exception:
+        return str(d)
+
 def formatear_fecha_letras(d) -> str:
     """
     Convierte una fecha a formato en palabras en español (ej. "10 de junio de 2026").
@@ -250,30 +267,22 @@ def generar_pdf_vialidad(vialidad: Vialidad, url_verificador: str = None) -> io.
     distrito = vialidad.distrito or "&nbsp;"
     solicitante = vialidad.nombre or "&nbsp;"
     concepto = vialidad.concepto or "&nbsp;"
-    fecha = formatear_fecha_letras(vialidad.fecha_emision)
-    fecha_exp = formatear_fecha_letras(vialidad.fecha_expiracion)
-    monto_letras = numero_a_letras(vialidad.precio_vialidad)
-    
     current_year = datetime.now().year
     if getattr(vialidad, "fecha_creacion", None):
         current_year = vialidad.fecha_creacion.year
+
+    fecha = formatear_fecha_puntos(vialidad.fecha_emision) or "__.__.____"
+    fecha_exp = formatear_fecha_puntos(vialidad.fecha_expiracion) or f"31.12.{current_year}"
+    monto_letras = numero_a_letras(vialidad.precio_vialidad)
 
     # 5. Generar cuadrícula de la marca de agua densa (tal como está en React)
     watermark_html = ""
     if vialidad.con_marca_agua:
         watermark_html = '<div class="watermark-container">'
-        for _ in range(48):
-            watermark_html += f"""
-            <div class="watermark-content">
-              <img src="{logo_base64}" class="watermark-logo" alt="" />
-              <div class="watermark-line"></div>
-              <div class="watermark-text-group">
-                <span class="wt-min">MINISTERIO</span>
-                <span class="wt-hac">DE HACIENDA</span>
-              </div>
-            </div>
-            """
-        watermark_html += '</div>'
+        watermark_html += '<div class="watermark-inner">'
+        for _ in range(150):
+            watermark_html += '<span class="wt-text">FORMULARIO DE ESPECIES MUNICIPALES</span>'
+        watermark_html += '</div></div>'
 
     # 6. Copia LITERAl del HTML y CSS de getVialidadPrintTemplate.js
     html_content = f"""<!DOCTYPE html>
@@ -305,21 +314,21 @@ def generar_pdf_vialidad(vialidad: Vialidad, url_verificador: str = None) -> io.
         background-color: white;
         color: #082f49;
         margin: 0;
-        padding: 1cm; /* Mantiene el margen visual del documento */
+        padding: 0;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }}
 
       @page {{
         size: letter;
-        margin: 0; /* Elimina cabeceras y pies de pagina del navegador */
+        margin: 1cm;
       }}
 
       /* Asegurar que la boleta ocupe el espacio de forma limpia en la hoja */
       .ticket-container {{
         width: 100%;
         max-width: 21cm;
-        min-height: 22.4cm; /* Reducido levemente de 23cm para evitar desbordes por milímetros */
+        height: 22.4cm; /* Cambiado de min-height para forzar la distribucion flex space-between en print */
         display: flex;
         flex-direction: column;
         justify-content: space-between;
@@ -336,59 +345,33 @@ def generar_pdf_vialidad(vialidad: Vialidad, url_verificador: str = None) -> io.
       /* Marca de agua optimizada para impresión (Densa) */
       .watermark-container {{
         position: absolute;
-        inset: 0; /* Ajustado a los límites exactos de la boleta */
-        display: grid;
-        grid-template-columns: repeat(6, 1fr);
-        grid-template-rows: repeat(8, 1fr);
-        gap: 1rem;
+        inset: 0;
         z-index: 0;
         pointer-events: none;
         user-select: none;
         overflow: hidden;
-        padding: 1rem;
-        box-sizing: border-box;
-        mix-blend-mode: multiply; /* Evita que el fondo transparente salga blanco en impresión */
-      }}
-
-      .watermark-content {{
-        opacity: 0.15; /* Visible para impresión */
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-        justify-content: center;
+        opacity: 0.07;
         mix-blend-mode: multiply;
       }}
 
-      .watermark-logo {{
-        width: 2.2rem;
-        height: 2.2rem;
-        object-fit: contain;
-      }}
-
-      .watermark-line {{
-        height: 1.8rem;
-        border-left: 1.5px solid #082f49;
-      }}
-
-      .watermark-text-group {{
+      .watermark-inner {{
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
         display: flex;
-        flex-direction: column;
-        line-height: 0.9;
-        text-align: left;
+        flex-wrap: wrap;
+        gap: 0.75rem 1rem;
+        align-content: flex-start;
+        justify-content: center;
+        padding: 0.5rem;
+        box-sizing: border-box;
       }}
 
-      .wt-min {{
-        font-size: 0.45rem;
+      .wt-text {{
+        font-size: 10px;
         font-weight: 700;
-        letter-spacing: 0.03em;
-        color: #082f49;
-        white-space: nowrap;
-      }}
-
-      .wt-hac {{
-        font-size: 0.55rem;
-        font-weight: 950;
-        letter-spacing: 0.03em;
+        letter-spacing: 0.05em;
         color: #082f49;
         white-space: nowrap;
       }}
@@ -400,124 +383,124 @@ def generar_pdf_vialidad(vialidad: Vialidad, url_verificador: str = None) -> io.
       {watermark_html}
 
       <!-- Encabezado del Recibo -->
-      <div class="relative z-10 border-b border-sky-200/50 pb-2 space-y-2">
+      <div class="relative z-10 pb-2 space-y-2">
         <div class="flex justify-between items-center">
-          <div class="space-y-0.5 text-left">
-            <h2 class="text-[14px] font-bold tracking-wider uppercase text-sky-700">
+          <div class="text-left">
+            <h2 class="text-[14px] font-bold tracking-wider uppercase text-sky-700 leading-none">
               República de El Salvador
             </h2>
-            <h1 class="text-[18px] font-black tracking-wide uppercase text-sky-700 font-display">
+            <h1 class="text-[18px] font-black tracking-wide uppercase text-sky-700 font-display leading-none" style="margin-top: 5px;">
               Fondo de Vialidad
             </h1>
           </div>
 
-          <div class="flex items-center gap-2">
-            <img src="{logo_base64}" alt="Escudo El Salvador" class="w-9 h-9 object-contain" />
-            <div class="h-8 border-l border-sky-300/80 mx-1"></div>
-            <div class="text-left leading-none">
-              <p class="text-[13px] font-bold tracking-wide text-sky-700 uppercase">Ministerio</p>
-              <p class="text-[13px] font-bold tracking-wide text-sky-700 uppercase">de Hacienda</p>
-            </div>
+          <div class="text-center leading-none">
+            <p class="text-[13px] font-black tracking-wide text-sky-700 uppercase">FORMULARIO DE</p>
+            <p class="text-[13px] font-black tracking-wide text-sky-700 uppercase mt-0.5">ESPECIES MUNICIPALES</p>
           </div>
         </div>
 
         <!-- Fila Inferior: Municipio/Distrito (Ancho completo) y debajo las 3 Columnas (Boleto-Recibo, No, Valor) -->
-        <div class="space-y-1.5 pt-1">
-          <div class="text-[13px] font-bold text-sky-700 flex items-end gap-2 w-full">
-            <span class="shrink-0 leading-none">MUNICIPIO / DISTRITO:</span>
+        <div class="space-y-1.5 pt-1" style="margin-top: 25px;">
+          <div class="text-[15px] font-bold text-sky-700 flex items-end gap-2 w-full">
+            <span class="font-black shrink-0 leading-none">MUNICIPIO / DISTRITO</span>
             <div class="flex-1 border-b border-sky-300 text-slate-600 font-bold uppercase tracking-wide text-xs px-2 leading-none min-h-[16px] text-left">
               {distrito}
             </div>
           </div>
 
-          <div class="flex justify-between items-center">
-            <div class="text-[13px] font-bold tracking-wide text-sky-700 uppercase">
-              BOLETO-RECIBO</br> SERIE "C"
+          <div class="flex justify-between items-baseline">
+            <div class="text-[15px] font-black tracking-wide text-sky-700 uppercase">
+              BOLETO-RECIBO
             </div>
 
             <div class="text-center">
-              <div class="text-[13px] font-bold tracking-wide text-sky-700 uppercase">
-                Nº <span class="text-[23px] text-red-500 text-base">{vialidad.numero_recibo}</span>
+              <div class="text-[15px] font-black tracking-wide text-sky-700 uppercase">
+                <span class="normal-case">No.</span> <span class="text-[26px] font-normal text-red-500">{vialidad.numero_recibo}</span>
               </div>
             </div>
 
             <div class="text-right">
-              <div class="text-[13px] font-bold tracking-wide text-sky-700 uppercase">
+              <div class="text-[15px] font-black tracking-wide text-sky-700 uppercase">
                 VALOR <span class="font-extrabold text-sky-700">${float(vialidad.precio_vialidad):.2f}</span>
               </div>
             </div>
+        </div>
+      </div>
+      
+      <div class="relative z-10 mt-1 mb-3 bg-transparent rounded-2xl border border-sky-200 text-sky-700 text-sm leading-relaxed text-justify overflow-hidden" style="margin-top: 1.8rem; margin-bottom: 2rem;">
+        <!-- Detalle del Contribuyente -->
+        <div class="p-4 space-y-2.5 bg-transparent" style="margin-bottom: 1px;">
+          <div class="flex items-end gap-2 w-full">
+            <span class="font-bold text-sky-700 shrink-0 pb-0.5">Contribuyente:</span>
+            <strong class="flex-1 text-base uppercase border-b border-sky-300 px-3 py-0.5 font-bold tracking-wide text-slate-600">
+              {solicitante}
+            </strong>
           </div>
-        </div>
-      </div>
 
-      <div class="relative z-10 my-3 bg-white/50 p-4 rounded-2xl text-sky-800 text-sm leading-relaxed text-justify space-y-2.5">
-        <div class="flex items-end gap-2 w-full">
-          <span class="font-bold text-sky-800 shrink-0 pb-0.5">Contribuyente:</span>
-          <strong class="flex-1 text-base uppercase border-b border-sky-300 px-3 py-0.5 font-bold tracking-wide text-slate-600">
-            {solicitante}
-          </strong>
+          <p class="text-sky-700 font-bold leading-relaxed">
+            ha pagado en este Distrito la suma de <span class="text-sky-700 font-bold uppercase">{monto_letras}</span>, que le corresponde como contribuyente al Fondo de Vialidad en concepto de <strong class="inline-block min-w-[150px] text-base uppercase border-b border-sky-300 px-3 py-0.5 font-bold tracking-wide text-slate-600">{concepto}</strong>. Durante el presente año.
+          </p>
         </div>
 
-        <p class="text-sky-800 font-medium leading-relaxed">
-          ha pagado en este Distrito la suma de <strong class="text-sky-800 font-bold uppercase">{monto_letras}</strong>, que le corresponde como contribuyente al Fondo de Vialidad en concepto de <strong class="inline-block min-w-[150px] text-base uppercase border-b border-sky-300 px-3 py-0.5 font-bold tracking-wide text-slate-600">{concepto}</strong>. Durante el presente año.
-        </p>
-      </div>
-
-      <!-- Firmas y Fechas -->
-      <div class="relative z-10 grid grid-cols-2 gap-6 border-t border-sky-200/30 pt-2 mt-auto">
-        <div class="flex flex-col items-center justify-between text-center space-y-8">
-          <div class="text-center space-y-0.5">
-            <span class="text-[10px] uppercase tracking-wider text-sky-600 font-bold">Fecha de Emisión</span>
-            <p class="text-sm font-black text-sky-900 underline decoration-sky-300 decoration-2">
+        <!-- Fechas (Divididas con borde superior e intermedio) -->
+        <div class="grid grid-cols-2 border-t border-sky-200 bg-transparent divide-x divide-sky-200">
+          <!-- Fecha de Emisión -->
+          <div class="text-center font-sans" style="margin-top: 13px; margin-bottom: 12px;">
+            <span class="text-sm tracking-wider text-sky-700 font-bold block">Fecha de Emisión</span>
+            <p class="text-sm font-bold text-slate-600" style="margin-top: 5px;">
               {fecha}
             </p>
           </div>
-          
-          <div class="relative flex flex-col items-center pt-4">
-            <!-- Imagen de Firma Real -->
-            <img 
-              src="{firma_alcalde_base64}" 
-              alt="Firma Alcalde" 
-              class="absolute -top-12 w-48 h-24 object-contain opacity-90"
-              onerror="this.style.display='none';" 
-            />
-            <div class="w-40 h-[1.5px] bg-sky-800/60 mb-1"></div>
-            <p class="text-[10px] font-black text-sky-900 uppercase">Alcalde o Delegado</p>
-          </div>
-        </div>
-
-        <div class="flex flex-col items-center justify-between text-center space-y-8">
-          <div class="text-center space-y-0.5">
-            <span class="text-[10px] uppercase tracking-wider text-sky-600 font-bold">Fecha de Expiración</span>
-            <p class="text-sm font-black text-sky-900 underline decoration-sky-300 decoration-2">
+          <!-- Fecha de Expiración -->
+          <div class="text-center font-sans" style="margin-top: 13px; margin-bottom: 12px;">
+            <span class="text-sm tracking-wider text-sky-700 font-bold block">Fecha de Expiración</span>
+            <p class="text-sm font-bold text-slate-600" style="margin-top: 5px;">
               {fecha_exp}
             </p>
           </div>
+        </div>
+      </div>
 
-          <div class="relative flex flex-col items-center pt-4">
-            <!-- Imagen de Firma Real -->
-            <img 
-              src="{firma_secretario_base64}" 
-              alt="Firma Secretario" 
-              class="absolute -top-12 w-48 h-24 object-contain opacity-90"
-              onerror="this.style.display='none';" 
-            />
-            <div class="w-40 h-[1.5px] bg-sky-800/60 mb-1"></div>
-            <p class="text-[10px] font-black text-sky-900 uppercase">Secretario</p>
-          </div>
+      <!-- Firmas -->
+      <div class="relative z-10 grid grid-cols-2 gap-6 mt-12 pb-4" style="margin-top: 4.8rem;">
+        <!-- Columna Izquierda: Alcalde -->
+        <div class="relative flex flex-col items-center pt-8 text-center">
+          <!-- Imagen de Firma Real -->
+          <img 
+            src="{firma_alcalde_base64}" 
+            alt="Firma Alcalde" 
+            class="absolute -top-10 w-48 h-20 object-contain opacity-90"
+            onerror="this.style.display='none';" 
+          />
+          <div class="w-40 h-[1px] bg-sky-200 mb-1"></div>
+          <p class="text-[10px] font-black text-sky-700 uppercase">Alcalde o Delegado</p>
+        </div>
+
+        <!-- Columna Derecha: Secretario -->
+        <div class="relative flex flex-col items-center pt-8 text-center">
+          <!-- Imagen de Firma Real -->
+          <img 
+            src="{firma_secretario_base64}" 
+            alt="Firma Secretario" 
+            class="absolute -top-10 w-48 h-20 object-contain opacity-90"
+            onerror="this.style.display='none';" 
+          />  
+          <div class="w-40 h-[1px] bg-sky-200 mb-1"></div>
+          <p class="text-[10px] font-black text-sky-700 uppercase">Secretario</p>
         </div>
       </div>
 
       <!-- Sección de Verificación QR y Llave Única -->
-      <div class="relative z-10 flex items-center justify-between border-t border-sky-200/40 mt-4 pt-2">
+      <div class="relative z-10 flex items-center justify-between border-t border-sky-200/40 mt-4 pt-2" style="margin-top: 2.5rem;">
         <!-- Izquierda: Textos informativos y el QR debajo -->
         <div class="flex flex-col items-start space-y-1">
           <p class="text-[9px] font-bold text-sky-700 uppercase tracking-wide">Documento Firmado Electrónicamente</p>
-          <p class="text-[10px] font-mono font-black text-sky-900 tracking-wider">Llave Única: {vialidad.llave_unica}</p>
+          <p class="text-[10px] font-mono font-bold text-sky-700 tracking-wider">Llave Única: {vialidad.llave_unica}</p>
           
           <div class="flex flex-col items-center pt-2">
             <img src="{qr_base64}" alt="Código QR de Verificación" class="w-32 h-32 border border-sky-200 p-1 bg-white rounded-lg shadow-sm" />
-            <p class="text-[8px] font-mono text-sky-700 mt-1">{verification_data}</p>
+            <p class="text-[8px] font-mono font-bold text-sky-700 mt-1">{verification_data}</p>
           </div>
         </div>
         
@@ -549,6 +532,13 @@ def generar_pdf_vialidad(vialidad: Vialidad, url_verificador: str = None) -> io.
         # Escribir HTML
         with open(html_temp_path, "w", encoding="utf-8") as f:
             f.write(html_content)
+            
+        # Guardar copia de depuración para desarrollo/visualización rápida
+        try:
+            with open(BACKEND_DIR / "test_output.html", "w", encoding="utf-8") as f_debug:
+                f_debug.write(html_content)
+        except Exception:
+            pass
             
         # 8. Ejecutar navegador headless dinámicamente con un virtual-time-budget mínimo
         # ya que todos los estilos y recursos ahora son locales y estáticos.
