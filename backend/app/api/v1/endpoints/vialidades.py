@@ -14,6 +14,21 @@ from app.services.pdf_generator import generar_pdf_vialidad
 logger = logging.getLogger("app.api.v1.endpoints.vialidades")
 router = APIRouter()
 
+@router.get("/siguiente-recibo")
+def get_siguiente_recibo(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """
+    Retorna el siguiente número de recibo correlativo disponible.
+    """
+    ultimo = db.query(Vialidad).order_by(Vialidad.codigo_vialidad.desc()).first()
+    if ultimo and ultimo.numero_recibo and ultimo.numero_recibo.isdigit():
+        siguiente = str(int(ultimo.numero_recibo) + 1)
+    else:
+        siguiente = "100001"
+    return {"siguiente": siguiente}
+
 @router.post("/", response_model=VialidadResponse, status_code=status.HTTP_201_CREATED)
 def create_vialidad(
     vialidad_in: VialidadCreate,
@@ -24,6 +39,8 @@ def create_vialidad(
     Guarda el registro de una nueva vialidad impresa.
     Requiere token JWT activo.
     """
+
+
     # Obtener o autogenerar la llave única
     llave = vialidad_in.llave_unica
     if not llave:
@@ -58,10 +75,12 @@ def create_vialidad(
     alcalde_url = config.firma_alcalde_url if config else None
     secretario_url = config.firma_secretario_url if config else None
 
+
+
     try:
         db_obj = Vialidad(
             llave_unica=llave.upper() if llave else None,
-            numero_recibo=vialidad_in.numero_recibo.upper() if vialidad_in.numero_recibo else None,
+            numero_recibo="TEMP",
             nombre=vialidad_in.nombre.upper() if vialidad_in.nombre else None,
             distrito=vialidad_in.distrito.upper() if vialidad_in.distrito else None,
             concepto=vialidad_in.concepto.upper() if vialidad_in.concepto else None,
@@ -76,6 +95,20 @@ def create_vialidad(
             firma_secretario_url=secretario_url
         )
         db.add(db_obj)
+        db.flush()
+        
+        ultimo = db.query(Vialidad).filter(
+            Vialidad.codigo_vialidad < db_obj.codigo_vialidad,
+            Vialidad.numero_recibo != "TEMP"
+        ).order_by(Vialidad.codigo_vialidad.desc()).first()
+        
+        if ultimo and ultimo.numero_recibo and ultimo.numero_recibo.isdigit():
+            offset = int(ultimo.numero_recibo) - ultimo.codigo_vialidad
+        else:
+            offset = 100000
+            
+        db_obj.numero_recibo = str(offset + db_obj.codigo_vialidad)
+        
         db.commit()
         db.refresh(db_obj)
         return db_obj

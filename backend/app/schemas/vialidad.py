@@ -4,7 +4,7 @@ from typing import Optional
 
 class VialidadBase(BaseModel):
     llave_unica: Optional[str] = Field(None, max_length=50)
-    numero_recibo: str = Field(..., max_length=50)
+    numero_recibo: Optional[str] = Field(None, max_length=50)
     nombre: str = Field(..., max_length=255)
     distrito: Optional[str] = Field(None, max_length=255)
     concepto: str = Field(..., max_length=255)

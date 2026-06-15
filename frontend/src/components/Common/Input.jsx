@@ -63,7 +63,20 @@ const Input = ({ label, type = "text", error, register, className = "", showCoun
           </button>
         )}
       </div>
-      {hasError && <p className="mt-1.5 text-sm text-red-500">{errorMessage}</p>}
+      {(hasError || (showCount && maxLength)) && (
+        <div className="flex justify-between items-center mt-1.5">
+          {hasError ? (
+            <p className="text-sm text-red-500">{errorMessage}</p>
+          ) : (
+            <div />
+          )}
+          {showCount && maxLength && (
+            <span className="text-xs text-slate-400 dark:text-slate-500 ml-auto select-none font-medium">
+              {props.value ? String(props.value).length : 0}/{maxLength}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 };

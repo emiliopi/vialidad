@@ -67,7 +67,7 @@ const formatFechaPuntos = (dateStr) => {
       }
       dateObj = new Date(str);
     }
-    
+
     if (!isNaN(dateObj.getTime())) {
       const day = String(dateObj.getDate()).padStart(2, '0');
       const month = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -107,12 +107,11 @@ export const VialidadDocument = ({ data, llave, qrUrl, precio = 3.43, firmaAlcal
   const apiVal = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
   const backendBaseUrl = apiVal.endsWith('/api') ? apiVal.substring(0, apiVal.length - 4) : apiVal;
 
-  const [htmlContent, setHtmlContent] = useState('');
+  const [templateHtml, setTemplateHtml] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
     fetch(`${backendBaseUrl}/static/templates/vialidad_template.html?t=${new Date().getTime()}`)
       .then(res => {
         if (!res.ok) {
@@ -121,66 +120,10 @@ export const VialidadDocument = ({ data, llave, qrUrl, precio = 3.43, firmaAlcal
         return res.text();
       })
       .then(html => {
-        if (!active) return;
-        
-        let targetUrl = `https://vialidad.gob.sv/verificar/${llave}`;
-        try {
-          if (qrUrl) {
-            const parsed = new URL(qrUrl);
-            targetUrl = parsed.searchParams.get('data') || targetUrl;
-          }
-        } catch (e) {
-          console.error("Error parsing qrUrl", e);
+        if (active) {
+          setTemplateHtml(html);
+          setLoading(false);
         }
-
-        const watermarkHtml = data.conMarcaAgua ? `
-          <div class="watermark-container">
-            <div class="watermark-inner">
-              ${Array.from({ length: 150 }).map(() => `
-                <span class="wt-text">FORMULARIO DE ESPECIES MUNICIPALES</span>
-              `).join('')}
-            </div>
-          </div>
-        ` : '';
-
-        const fecha = (formatFechaPuntos(data.fecha) || '').trim() || '__.__.____';
-        const fechaExp = (formatFechaPuntos(data.fecha_expiracion) || '').trim() || `31.12.${currentYear}`;
-        console.log("DEBUG DATES:", { data_fecha: data.fecha, fecha, fechaExp });
-        const montoLetras = numeroALetras(Number(precio));
-        
-        const fAlcalde = firmaAlcaldeUrl ? `${backendBaseUrl}${firmaAlcaldeUrl}` : "/firma_alcalde.png";
-        const fSecretario = firmaSecretarioUrl ? `${backendBaseUrl}${firmaSecretarioUrl}` : "/firma_secretario.png";
-
-        let rendered = html
-          .replace("{{watermark_html}}", watermarkHtml)
-          .replace("{{distrito}}", data.distrito || '&nbsp;')
-          .replace("{{numero_recibo}}", data.numeroRecibo || '&nbsp;')
-          .replace("{{precio_vialidad}}", Number(precio).toFixed(2))
-          .replace("{{solicitante}}", data.solicitante || '&nbsp;')
-          .replace("{{monto_letras}}", montoLetras)
-          .replace("{{concepto}}", data.concepto || '&nbsp;')
-          .replace("{{fecha_emision}}", fecha)
-          .replace("{{fecha_expiracion}}", fechaExp)
-          .replace("{{firma_alcalde}}", fAlcalde)
-          .replace("{{firma_secretario}}", fSecretario)
-          .replace("{{llave_unica}}", llave || '&nbsp;')
-          .replace("{{qr_code}}", qrUrl || '')
-          .replace("{{verification_data}}", targetUrl)
-          .replace("{{logo_card}}", "/logo_card_frontal.png");
-
-        const styleMatch = rendered.match(/<style>([\s\S]*?)<\/style>/i);
-        const bodyContentMatch = rendered.match(/<body>([\s\S]*?)<\/body>/i);
-        let finalHtml = '';
-        if (styleMatch) {
-          finalHtml += `<style>${styleMatch[1]}</style>`;
-        }
-        if (bodyContentMatch && bodyContentMatch[1]) {
-          finalHtml += bodyContentMatch[1];
-        } else {
-          finalHtml = rendered;
-        }
-        setHtmlContent(finalHtml);
-        setLoading(false);
       })
       .catch(err => {
         console.error(err);
@@ -190,14 +133,74 @@ export const VialidadDocument = ({ data, llave, qrUrl, precio = 3.43, firmaAlcal
     return () => {
       active = false;
     };
-  }, [data, llave, qrUrl, precio, firmaAlcaldeUrl, firmaSecretarioUrl, backendBaseUrl, currentYear]);
+  }, [backendBaseUrl]);
 
   if (loading) {
     return (
       <div className="w-[21cm] h-[22.4cm] flex items-center justify-center bg-white border border-sky-200 rounded-xl shadow-xl">
-        <p className="text-sky-700 font-bold animate-pulse">Cargando diseño oficial...</p>
+        <p className="text-sky-700 font-bold animate-pulse">Cargando...</p>
       </div>
     );
+  }
+
+  if (!templateHtml) return null;
+
+  let targetUrl = `https://vialidad.gob.sv/verificar/${llave}`;
+  try {
+    if (qrUrl) {
+      const parsed = new URL(qrUrl);
+      targetUrl = parsed.searchParams.get('data') || targetUrl;
+    }
+  } catch (e) {
+    console.error("Error parsing qrUrl", e);
+  }
+
+  const watermarkHtml = data.conMarcaAgua ? `
+    <div class="watermark-container">
+      <div class="watermark-inner">
+        ${Array.from({ length: 150 }).map(() => `
+          <span class="wt-text">FORMULARIO DE ESPECIES MUNICIPALES</span>
+        `).join('')}
+      </div>
+    </div>
+  ` : '';
+
+  const fecha = (formatFechaPuntos(data.fecha) || '').trim() || '__.__.____';
+  const fechaExp = (formatFechaPuntos(data.fecha_expiracion) || '').trim() || `31.12.${currentYear}`;
+  const montoLetras = numeroALetras(Number(precio));
+
+  const fAlcalde = firmaAlcaldeUrl ? `${backendBaseUrl}${firmaAlcaldeUrl}` : "/firma_alcalde.png";
+  const fSecretario = firmaSecretarioUrl ? `${backendBaseUrl}${firmaSecretarioUrl}` : "/firma_secretario.png";
+
+  let rendered = templateHtml
+    .replace("{{watermark_html}}", watermarkHtml)
+    .replace("{{distrito}}", data.distrito || '&nbsp;')
+    .replace("{{numero_recibo}}", data.numeroRecibo || '&nbsp;')
+    .replace("{{precio_vialidad}}", Number(precio).toFixed(2))
+    .replace("{{solicitante}}", data.solicitante || '&nbsp;')
+    .replace("{{monto_letras}}", montoLetras)
+    .replace("{{concepto}}", data.concepto || '&nbsp;')
+    .replace("{{fecha_emision}}", fecha)
+    .replace("{{fecha_expiracion}}", fechaExp)
+    .replace("{{firma_alcalde}}", fAlcalde)
+    .replace("{{firma_secretario}}", fSecretario)
+    .replace("{{llave_unica}}", llave || '&nbsp;')
+    .replace("{{qr_code}}", qrUrl || '')
+    .replace("{{verification_data}}", targetUrl)
+    .replace("{{logo_card}}", "/logo_card_frontal.png");
+
+  const styleMatch = rendered.match(/<style>([\s\S]*?)<\/style>/i);
+  const bodyContentMatch = rendered.match(/<body>([\s\S]*?)<\/body>/i);
+  let finalHtml = '';
+  if (styleMatch) {
+    let css = styleMatch[1];
+    css = css.replace(/body\s*\{/gi, '#print-area {');
+    finalHtml += `<style>${css}</style>`;
+  }
+  if (bodyContentMatch && bodyContentMatch[1]) {
+    finalHtml += bodyContentMatch[1];
+  } else {
+    finalHtml = rendered;
   }
 
   return (
@@ -205,7 +208,7 @@ export const VialidadDocument = ({ data, llave, qrUrl, precio = 3.43, firmaAlcal
       id="print-area"
       className="select-text shadow-xl print:shadow-none rounded-xl overflow-hidden"
       style={{ contentVisibility: 'auto' }}
-      dangerouslySetInnerHTML={{ __html: htmlContent }}
+      dangerouslySetInnerHTML={{ __html: finalHtml }}
     />
   );
 };

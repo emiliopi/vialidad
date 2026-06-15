@@ -38,14 +38,17 @@ export const VialidadForm = ({ data, onChange }) => {
         Datos del Documento
       </h3>
       
-      <div className="space-y-4">
-        <Input
-          label="Número de Recibo *"
-          value={data.numeroRecibo || ''}
-          onChange={(e) => handleChange('numeroRecibo', e.target.value)}
-          placeholder="Ej. 178513"
+              <Input
+          label="Contribuyente *"
+          value={data.solicitante || ''}
+          onChange={(e) => handleChange('solicitante', e.target.value)}
+          placeholder="Ej. Juan Pérez"
+          maxLength={255}
+          showCount={true}
           required
         />
+      <div className="space-y-4">
+
 
         <Select
           label="Municipio / Distrito (Opcional)"
@@ -54,15 +57,6 @@ export const VialidadForm = ({ data, onChange }) => {
           placeholder="Selecciona un distrito..."
           searchable={true}
           options={distritos.map(d => ({ value: d.nombre, label: d.nombre }))}
-        />
-
-
-        <Input
-          label="Contribuyente *"
-          value={data.solicitante || ''}
-          onChange={(e) => handleChange('solicitante', e.target.value)}
-          placeholder="Ej. Juan Pérez"
-          required
         />
 
         <Select

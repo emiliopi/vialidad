@@ -14,6 +14,14 @@ export const vialidadService = {
   },
 
   /**
+   * Obtiene el siguiente número de recibo correlativo disponible.
+   */
+  getSiguienteRecibo: async () => {
+    const res = await api.get('/vialidades/siguiente-recibo');
+    return res.data;
+  },
+
+  /**
    * Obtiene el listado de vialidades emitidas de forma paginada.
    */
   getVialidades: async (page = 1, limit = 10, search = '') => {

@@ -45,7 +45,15 @@ export const Vialidades = () => {
   const [limit] = useState(10);
   const [search, setSearch] = useState('');
   const [total, setTotal] = useState(0);
-  const [isCreating, setIsCreating] = useState(false);
+  const [isCreating, setIsCreatingState] = useState(() => sessionStorage.getItem('vialidad_is_creating') === 'true');
+  const setIsCreating = (val) => {
+    setIsCreatingState(val);
+    if (val) {
+      sessionStorage.setItem('vialidad_is_creating', 'true');
+    } else {
+      sessionStorage.removeItem('vialidad_is_creating');
+    }
+  };
 
   // Estados de Configuración Global de Vialidad
   const [configPrecio, setConfigPrecio] = useState(3.43);
@@ -100,7 +108,6 @@ export const Vialidades = () => {
     const HH = String(now.getHours()).padStart(2, '0');
     const mm = String(now.getMinutes()).padStart(2, '0');
     const ss = String(now.getSeconds()).padStart(2, '0');
-    
     setLlave(`VIA-${YYYY}-${MM}${DD}${HH}${mm}${ss}`);
     setData({
       numeroRecibo: '',
@@ -221,7 +228,7 @@ export const Vialidades = () => {
     try {
       const payload = {
         llave_unica: llave,
-        numero_recibo: data.numeroRecibo,
+        numero_recibo: data.numeroRecibo || "TEMP",
         nombre: data.solicitante,
         distrito: data.distrito || null,
         concepto: data.concepto,
@@ -231,7 +238,7 @@ export const Vialidades = () => {
         max_visualizaciones: data.max_visualizaciones !== undefined ? data.max_visualizaciones : 5
       };
 
-      await vialidadService.createVialidad(payload);
+      const savedVialidad = await vialidadService.createVialidad(payload);
       toast.success('¡Documento registrado y listo para imprimir!', { id: loadToast });
 
       // Crear un iframe invisible
@@ -245,7 +252,27 @@ export const Vialidades = () => {
       document.body.appendChild(iframe);
 
       const templateHtml = await getTemplateContent();
-      const htmlContent = getVialidadPrintTemplate(templateHtml, data, llave, qrUrl, data.conMarcaAgua, configPrecio, configAlcaldeFirma, configSecretarioFirma);
+      
+      // Mapear campos retornados por el backend (con el número de recibo secuencial real)
+      const printData = {
+        numeroRecibo: savedVialidad.numero_recibo,
+        distrito: savedVialidad.distrito,
+        solicitante: savedVialidad.nombre,
+        concepto: savedVialidad.concepto,
+        fecha: savedVialidad.fecha_emision,
+        fecha_expiracion: savedVialidad.fecha_expiracion
+      };
+
+      const htmlContent = getVialidadPrintTemplate(
+        templateHtml, 
+        printData, 
+        llave, 
+        qrUrl, 
+        savedVialidad.con_marca_agua, 
+        configPrecio, 
+        configAlcaldeFirma, 
+        configSecretarioFirma
+      );
       
       // Escribir el HTML al documento del iframe
       const doc = iframe.contentDocument || iframe.contentWindow.document;
@@ -283,7 +310,7 @@ export const Vialidades = () => {
     setIsModalOpen(true);
   };
 
-  const isInvalid = !data.solicitante?.trim() || !data.concepto?.trim() || !data.numeroRecibo?.trim() || !String(data.max_visualizaciones || '').trim();
+  const isInvalid = (data.solicitante?.trim().length || 0) < 5 || !data.concepto?.trim() || !String(data.max_visualizaciones || '').trim();
   const totalPages = Math.ceil(total / limit) || 1;
 
   return (

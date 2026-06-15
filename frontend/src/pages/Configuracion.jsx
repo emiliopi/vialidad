@@ -3,6 +3,7 @@ import { toast } from 'react-hot-toast';
 import DashboardLayout from '../components/Layout/DashboardLayout';
 import { Button, Input } from '../components/Common';
 import { configuracionService } from '../api/configuracionService';
+import { VialidadDocument } from '../components/Vialidades/VialidadDocument';
 
 export const Configuracion = () => {
   const [precio, setPrecio] = useState('3.43');
@@ -236,6 +237,40 @@ export const Configuracion = () => {
               </div>
             </div>
 
+          </div>
+        )}
+
+        {/* Vista Previa del Diseño del Documento */}
+        {!loading && (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm space-y-6">
+            <div className="border-b border-slate-100 dark:border-slate-800 pb-2">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                Vista Previa de la Plantilla de Vialidad
+              </h3>
+              <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">
+                Visualización reactiva en tiempo real del diseño oficial. Cualquier cambio guardado en el precio o las firmas cargadas se reflejará aquí automáticamente.
+              </p>
+            </div>
+            <div className="flex justify-center bg-slate-100 dark:bg-slate-950 p-6 rounded-xl overflow-x-auto">
+              <div className="scale-90 origin-top">
+                <VialidadDocument
+                  data={{
+                    numeroRecibo: '12345',
+                    distrito: 'SAN SALVADOR CENTRO',
+                    solicitante: 'JUAN PÉREZ (CONTRIBUYENTE DEMO)',
+                    concepto: 'EMPLEADO',
+                    conMarcaAgua: true,
+                    fecha: new Date().toISOString().split('T')[0],
+                    fecha_expiracion: `${new Date().getFullYear()}-12-31`
+                  }}
+                  llave="VIA-2026-DEMO000000"
+                  qrUrl={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('https://vialidad.gob.sv/verificar/VIA-2026-DEMO000000')}`}
+                  precio={parseFloat(precio) || 3.43}
+                  firmaAlcaldeUrl={firmaAlcaldeUrl}
+                  firmaSecretarioUrl={firmaSecretarioUrl}
+                />
+              </div>
+            </div>
           </div>
         )}
 

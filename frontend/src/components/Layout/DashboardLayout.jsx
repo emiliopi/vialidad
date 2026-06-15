@@ -89,8 +89,8 @@ const DashboardLayout = ({ children }) => {
 
       {/* Sidebar */}
       <aside 
-        className={`fixed inset-y-0 left-0 z-50 bg-primary dark:bg-slate-900 w-64 transform transition-transform duration-300 ${
-          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        className={`fixed inset-y-0 left-0 z-50 bg-primary dark:bg-slate-900 w-64 transform transition-transform duration-300 max-lg:-translate-x-full ${
+          mobileMenuOpen ? 'max-lg:translate-x-0' : ''
         }`}
       >
         <div className="flex flex-col h-full">

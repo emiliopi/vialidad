@@ -170,7 +170,7 @@ export const VerificarVialidad = () => {
                   <span className="text-xl">✅</span> Documento de Vialidad Auténtico
                 </h3>
                 <p className="text-slate-600 dark:text-slate-400 text-xs mt-1">
-                  Este boleto es oficial y ha sido firmado electrónicamente por la municipalidad.
+                  Este documento digital es oficial y ha sido firmado electrónicamente por la municipalidad.
                 </p>
               </div>
               <div className="bg-white dark:bg-slate-900 px-4 py-2 rounded-xl border border-emerald-100 dark:border-emerald-900/40 text-center shrink-0">
