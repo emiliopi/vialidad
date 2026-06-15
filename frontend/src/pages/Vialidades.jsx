@@ -71,6 +71,25 @@ export const Vialidades = () => {
 
   const [llave, setLlave] = useState('');
   const [isPrinting, setIsPrinting] = useState(false);
+  const [vialidadTemplate, setVialidadTemplate] = useState('');
+
+  // Función para obtener/cargar la plantilla HTML única
+  const getTemplateContent = async () => {
+    if (vialidadTemplate) return vialidadTemplate;
+    try {
+      const apiVal = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+      const backendBaseUrl = apiVal.endsWith('/api') ? apiVal.substring(0, apiVal.length - 4) : apiVal;
+      const res = await fetch(`${backendBaseUrl}/static/templates/vialidad_template.html`);
+      if (res.ok) {
+        const html = await res.text();
+        setVialidadTemplate(html);
+        return html;
+      }
+    } catch (e) {
+      console.error("Error al obtener la plantilla de impresión:", e);
+    }
+    return '';
+  };
 
   // Función para resetear/inicializar el formulario con llave nueva y limpia
   const resetForm = () => {
@@ -131,10 +150,11 @@ export const Vialidades = () => {
     }
   };
 
-  // Inicialización de la primera llave y carga de configuración
+  // Inicialización de la primera llave, carga de configuración y precarga de plantilla
   useEffect(() => {
     resetForm();
     loadConfig();
+    getTemplateContent();
   }, []);
 
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
@@ -142,7 +162,7 @@ export const Vialidades = () => {
   )}`;
 
   // Imprimir desde un registro del datatable (Re-imprimir)
-  const handlePrintExisting = (vialidadObj) => {
+  const handlePrintExisting = async (vialidadObj) => {
     const qrUrlExisting = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
       configUrlVerificador + '/verificar/' + vialidadObj.llave_unica
     )}`;
@@ -170,7 +190,8 @@ export const Vialidades = () => {
     const printAlcalde = vialidadObj.firma_alcalde_url || configAlcaldeFirma;
     const printSecretario = vialidadObj.firma_secretario_url || configSecretarioFirma;
 
-    const htmlContent = getVialidadPrintTemplate(docData, vialidadObj.llave_unica, qrUrlExisting, vialidadObj.con_marca_agua, printPrecio, printAlcalde, printSecretario);
+    const templateHtml = await getTemplateContent();
+    const htmlContent = getVialidadPrintTemplate(templateHtml, docData, vialidadObj.llave_unica, qrUrlExisting, vialidadObj.con_marca_agua, printPrecio, printAlcalde, printSecretario);
     
     const doc = iframe.contentDocument || iframe.contentWindow.document;
     doc.open();
@@ -223,8 +244,8 @@ export const Vialidades = () => {
       iframe.style.border = '0';
       document.body.appendChild(iframe);
 
-      // Obtener el HTML con los estilos aplicados
-      const htmlContent = getVialidadPrintTemplate(data, llave, qrUrl, data.conMarcaAgua, configPrecio, configAlcaldeFirma, configSecretarioFirma);
+      const templateHtml = await getTemplateContent();
+      const htmlContent = getVialidadPrintTemplate(templateHtml, data, llave, qrUrl, data.conMarcaAgua, configPrecio, configAlcaldeFirma, configSecretarioFirma);
       
       // Escribir el HTML al documento del iframe
       const doc = iframe.contentDocument || iframe.contentWindow.document;

@@ -188,7 +188,8 @@ export const VerificarVialidad = () => {
                   solicitante: result.datos.nombre,
                   concepto: result.datos.concepto,
                   conMarcaAgua: result.datos.con_marca_agua,
-                  fecha: result.datos.fecha_emision
+                  fecha: result.datos.fecha_emision,
+                  fecha_expiracion: result.datos.fecha_expiracion
                 }}
                 llave={result.datos.llave_unica}
                 qrUrl={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
