@@ -653,7 +653,7 @@ export const Vialidades = () => {
                           <th className="px-6 py-4">Contribuyente / Distrito</th>
                           <th className="px-6 py-4">Concepto</th>
                           <th className="px-6 py-4">Llave / Visualizaciones</th>
-                          <th className="px-6 py-4">Fecha Emisión</th>
+                          <th className="px-6 py-4">Emisión / Expiración</th>
                           <th className="px-6 py-4 text-right">Acciones</th>
                         </tr>
                       </thead>
@@ -682,7 +682,7 @@ export const Vialidades = () => {
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex flex-col gap-1.5">
-                                <span className="font-mono text-[10px] text-sky-700 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40 px-2 py-0.5 rounded w-fit">
+                                <span className="font-mono text-[12px] text-sky-700 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40 px-2 py-0.5 rounded w-fit">
                                   {v.llave_unica}
                                 </span>
                                 <div className="flex items-center">
@@ -692,8 +692,13 @@ export const Vialidades = () => {
                                 </div>
                               </div>
                             </td>
-                            <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs font-medium">
-                              {formatFechaEspanol(v.fecha_emision)}
+                            <td className="px-6 py-4">
+                              <div className="flex flex-col">
+                                <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm">{formatFechaEspanol(v.fecha_emision)}</span>
+                                <span className=" text-slate-500 dark:text-slate-400 mt-0.5 text-sm" title="Fecha de Expiración">
+                                  {formatFechaEspanol(v.fecha_expiracion)}
+                                </span>
+                              </div>
                             </td>
                             <td className="px-6 py-4 text-right">
                               <div className="flex flex-col gap-1 items-end">

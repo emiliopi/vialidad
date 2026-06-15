@@ -193,7 +193,9 @@ export const VialidadDocument = ({ data, llave, qrUrl, precio = 3.43, firmaAlcal
   const bodyContentMatch = rendered.match(/<body>([\s\S]*?)<\/body>/i);
   let finalHtml = '';
   if (styleMatch) {
-    finalHtml += `<style>${styleMatch[1]}</style>`;
+    let css = styleMatch[1];
+    css = css.replace(/body\s*\{/gi, '#print-area {');
+    finalHtml += `<style>${css}</style>`;
   }
   if (bodyContentMatch && bodyContentMatch[1]) {
     finalHtml += bodyContentMatch[1];
