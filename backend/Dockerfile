@@ -4,7 +4,7 @@ FROM python:3.11-slim as builder
 WORKDIR /app
 
 # Instalar dependencias necesarias para compilar drivers (como pyodbc y dependencias de sistema si aplican)
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends \
     build-essential \
     unixodbc-dev \
     curl \
@@ -22,15 +22,15 @@ FROM python:3.11-slim as runner
 WORKDIR /app
 
 # Instalar MS ODBC SQL Server driver, dependencias de ejecución de ODBC y Chromium Headless
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends \
     unixodbc \
     curl \
     gnupg \
     chromium \
     && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
     && curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list \
-    && apt-get update \
-    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql17 \
+    && apt-get -o Acquire::ForceIPv4=true update \
+    && ACCEPT_EULA=Y apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends msodbcsql17 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar dependencias desde la etapa anterior
