@@ -21,11 +21,12 @@ FROM python:3.11-slim as runner
 
 WORKDIR /app
 
-# Instalar MS ODBC SQL Server driver y dependencias de ejecución de ODBC
+# Instalar MS ODBC SQL Server driver, dependencias de ejecución de ODBC y Chromium Headless
 RUN apt-get update && apt-get install -y --no-install-recommends \
     unixodbc \
     curl \
     gnupg \
+    chromium \
     && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
     && curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list \
     && apt-get update \

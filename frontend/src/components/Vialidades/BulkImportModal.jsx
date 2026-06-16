@@ -425,7 +425,7 @@ export const BulkImportModal = ({ isOpen, onClose, onSuccess, configPrecio, conf
               <li>Descarga la plantilla Excel oficial usando el botón inferior.</li>
               <li>Llena los datos: <strong>solicitante</strong> y <strong>concepto</strong> son obligatorios.</li>
               <li>Sube el archivo — podrás corregir concepto y distrito desde listas desplegables antes de importar.</li>
-              <li>Confirma la importación para registrar y descargar el ZIP de boletas listas para imprimir.</li>
+              <li>Confirma la importación para registrar las boletas listas para imprimir.</li>
             </ol>
           </div>
 
