@@ -1,11 +1,11 @@
 # Etapa 1: Construcción
-FROM python:3.11-slim as builder
+# Cambio: Especificamos 'bullseye' para que coincida con el repositorio de Microsoft
+FROM python:3.11-slim-bullseye as builder
 
 WORKDIR /app
 
-# Instalar dependencias necesarias para compilar drivers (como pyodbc y dependencias de sistema si aplican)
-RUN (sed -i 's/http:/https:/g' /etc/apt/sources.list.d/debian.sources || sed -i 's/http:/https:/g' /etc/apt/sources.list) \
-    && apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends \
+# FIX 1: Eliminamos el comando 'sed' para que use HTTP normal y no choque con el firewall
+RUN apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends \
     build-essential \
     unixodbc-dev \
     curl \
@@ -14,17 +14,18 @@ RUN (sed -i 's/http:/https:/g' /etc/apt/sources.list.d/debian.sources || sed -i 
 
 COPY requirements.txt .
 
-# Crear una instalación de paquetes aislada para copiar a la imagen final
-RUN pip install --no-cache-dir --user -r requirements.txt
+# FIX 2: Usamos un entorno virtual (venv) en lugar de --user para evitar problemas de permisos
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Etapa 2: Imagen Final de Ejecución (Mínima y segura)
-FROM python:3.11-slim as runner
+FROM python:3.11-slim-bullseye as runner
 
 WORKDIR /app
 
-# Instalar MS ODBC SQL Server driver, dependencias de ejecución de ODBC, Chromium Headless y libmagic
-RUN (sed -i 's/http:/https:/g' /etc/apt/sources.list.d/debian.sources || sed -i 's/http:/https:/g' /etc/apt/sources.list) \
-    && apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends \
+# FIX 1: Eliminamos el 'sed' también en esta etapa
+RUN apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends \
     unixodbc \
     curl \
     gnupg \
@@ -36,18 +37,18 @@ RUN (sed -i 's/http:/https:/g' /etc/apt/sources.list.d/debian.sources || sed -i 
     && ACCEPT_EULA=Y apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends msodbcsql17 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copiar dependencias desde la etapa anterior
-COPY --from=builder /root/.local /root/.local
+# Copiar el entorno virtual con las dependencias desde la etapa anterior
+COPY --from=builder /opt/venv /opt/venv
 COPY . .
 
-# Configurar variable de entorno para que los paquetes del builder estén disponibles
-ENV PATH=/root/.local/bin:$PATH
+# Activar el entorno virtual para que Python encuentre los paquetes
+ENV PATH="/opt/venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8000
 
-# Crear un usuario sin privilegios por razones de seguridad
-RUN useradd -u 1001 appuser && chown -R appuser:appuser /app
+# Crear un usuario sin privilegios y darle propiedad de la carpeta /app
+RUN useradd -m -u 1001 appuser && chown -R appuser:appuser /app
 USER appuser
 
 # Healthcheck interno del contenedor
