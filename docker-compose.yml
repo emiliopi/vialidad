@@ -1,10 +1,9 @@
-version: '3.8'
-
 services:
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      network: host
     container_name: vialidad-backend
     restart: unless-stopped
     ports:
@@ -21,25 +20,39 @@ services:
       - REFRESH_TOKEN_EXPIRE_DAYS=${REFRESH_TOKEN_EXPIRE_DAYS:-7}
       - MAX_LOGIN_ATTEMPTS=${MAX_LOGIN_ATTEMPTS:-5}
       - LOCKOUT_DURATION_MINUTES=${LOCKOUT_DURATION_MINUTES:-5}
+    networks:
+      - vialidad-net
 
   frontend-admin:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      network: host
       args:
         - VITE_API_URL=${VITE_API_URL_ADMIN}
     container_name: vialidad-admin
     restart: unless-stopped
     ports:
       - "${PORT_FRONTEND_ADMIN:-8085}:80"
+    networks:
+      - vialidad-net
 
   frontend-public:
     build:
       context: ./frontend-public
       dockerfile: Dockerfile
+      network: host
       args:
         - VITE_API_URL=${VITE_API_URL_PUBLIC}
     container_name: vialidad-verificador
     restart: unless-stopped
     ports:
       - "${PORT_FRONTEND_PUBLIC:-8086}:80"
+    networks:
+      - vialidad-net
+
+networks:
+  vialidad-net:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: "1400"
