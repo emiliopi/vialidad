@@ -1,36 +1,22 @@
-# Etapa 1: Constructor (Versión Completa)
-FROM python:3.11-bullseye as builder
-
-WORKDIR /app
-
-# Como ya trae los compiladores, solo instalamos la librería de odbc por HTTP
-RUN apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends \
-    unixodbc-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt .
-
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-
-# Instalamos paquetes de Python ignorando el firewall SSL
-RUN pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org --no-cache-dir -r requirements.txt
-
-
 # Etapa 2: Imagen Final de Ejecución
 FROM python:3.11-bullseye as runner
 
 WORKDIR /app
 
-# Instalamos solo lo estrictamente necesario de Microsoft y el sistema
+# 1. Instalamos lo ligero y el driver de Microsoft primero
 RUN apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends \
     unixodbc \
-    chromium \
     libmagic1 \
     && curl -k https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
     && curl -k https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list \
     && apt-get -o Acquire::ForceIPv4=true update \
     && ACCEPT_EULA=Y apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends msodbcsql17 \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2. Instalamos Chromium COMPLETAMENTE SEPARADO y con reglas agresivas de reintento
+# Le damos 10 reintentos y 600 segundos (10 min) de tolerancia por corte
+RUN apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=10 -o Acquire::http::Timeout=600 update \
+    && apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=10 -o Acquire::http::Timeout=600 install -y --no-install-recommends chromium \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /opt/venv /opt/venv
