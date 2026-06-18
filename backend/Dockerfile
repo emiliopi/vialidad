@@ -6,7 +6,10 @@ FROM python:3.11-bullseye AS builder
 WORKDIR /app
 
 # 1. Instalamos la librería de odbc por HTTP
-RUN apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends \
+RUN (ip link set dev eth0 mtu 1400 || true) \
+    && sed -i 's/deb.debian.org/mirrors.cloudflare.com/g' /etc/apt/sources.list \
+    && sed -i 's/http:/https:/g' /etc/apt/sources.list \
+    && apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends \
     unixodbc-dev \
     && rm -rf /var/lib/apt/lists/*
 
@@ -28,7 +31,10 @@ FROM python:3.11-bullseye AS runner
 WORKDIR /app
 
 # 4. Instalamos lo ligero y el driver de Microsoft
-RUN apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends \
+RUN (ip link set dev eth0 mtu 1400 || true) \
+    && sed -i 's/deb.debian.org/mirrors.cloudflare.com/g' /etc/apt/sources.list \
+    && sed -i 's/http:/https:/g' /etc/apt/sources.list \
+    && apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends \
     unixodbc \
     libmagic1 \
     && curl -k https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
@@ -38,7 +44,8 @@ RUN apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=t
     && rm -rf /var/lib/apt/lists/*
 
 # 5. Instalamos Chromium COMPLETAMENTE SEPARADO y con reintentos para que la red no lo bote
-RUN apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=10 -o Acquire::http::Timeout=600 update \
+RUN (ip link set dev eth0 mtu 1400 || true) \
+    && apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=10 -o Acquire::http::Timeout=600 update \
     && apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=10 -o Acquire::http::Timeout=600 install -y --no-install-recommends chromium \
     && rm -rf /var/lib/apt/lists/*
 
