@@ -1,42 +1,37 @@
-# Etapa 1: Constructor (Alpine)
-FROM python:3.11-alpine as builder
+# Etapa 1: Constructor (Versión Completa)
+FROM python:3.11-bullseye as builder
 
 WORKDIR /app
 
-# Instalar herramientas de compilación ligeras para Alpine
-RUN apk add --no-cache \
-    build-base \
+# Como ya trae los compiladores, solo instalamos la librería de odbc por HTTP
+RUN apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends \
     unixodbc-dev \
-    curl \
-    gnupg
+    && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Instalación de paquetes ignorando SSL por si acaso
+# Instalamos paquetes de Python ignorando el firewall SSL
 RUN pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org --no-cache-dir -r requirements.txt
 
 
-# Etapa 2: Ejecución Final
-FROM python:3.11-alpine as runner
+# Etapa 2: Imagen Final de Ejecución
+FROM python:3.11-bullseye as runner
 
 WORKDIR /app
 
-# Instalar dependencias de ejecución, Chromium y el Driver de Microsoft para Alpine
-RUN apk add --no-cache \
+# Instalamos solo lo estrictamente necesario de Microsoft y el sistema
+RUN apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends \
     unixodbc \
-    curl \
-    gnupg \
     chromium \
-    libmagic
-
-# Descargar las llaves y el driver de Microsoft específicos para Alpine Linux
-RUN curl -k https://packages.microsoft.com/keys/microsoft.asc | gpg --import - \
-    && curl -k https://packages.microsoft.com/config/alpine/3.15/prod.list > /etc/apk/repositories.d/mssql-release.repo \
-    && apk update \
-    && ACCEPT_EULA=Y apk add --no-cache msodbcsql17
+    libmagic1 \
+    && curl -k https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
+    && curl -k https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get -o Acquire::ForceIPv4=true update \
+    && ACCEPT_EULA=Y apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends msodbcsql17 \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /opt/venv /opt/venv
 COPY . .
@@ -46,8 +41,8 @@ ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8000
 
-# Crear usuario seguro en Alpine
-RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app
+# Usuario sin privilegios por seguridad
+RUN useradd -m -u 1001 appuser && chown -R appuser:appuser /app
 USER appuser
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
