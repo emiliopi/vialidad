@@ -21,12 +21,13 @@ FROM python:3.11-slim as runner
 
 WORKDIR /app
 
-# Instalar MS ODBC SQL Server driver, dependencias de ejecución de ODBC y Chromium Headless
+# Instalar MS ODBC SQL Server driver, dependencias de ejecución de ODBC, Chromium Headless y libmagic
 RUN apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends \
     unixodbc \
     curl \
     gnupg \
     chromium \
+    libmagic1 \
     && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
     && curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list \
     && apt-get -o Acquire::ForceIPv4=true update \
