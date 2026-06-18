@@ -187,7 +187,7 @@ export const VialidadDocument = ({ data, llave, qrUrl, precio = 3.43, firmaAlcal
     .replace("{{llave_unica}}", llave || '&nbsp;')
     .replace("{{qr_code}}", qrUrl || '')
     .replace("{{verification_data}}", targetUrl)
-    .replace("{{logo_card}}", "/logo_card_frontal.png");
+    .replace("{{logo_card}}", "/static/logo_card_frontal.png");
 
   // Inyectar <base href> para que el iframe resuelva /static/ correctamente desde el backend
   const renderedWithBase = rendered.replace('<head>', `<head><base href="${backendBaseUrl}/">`);

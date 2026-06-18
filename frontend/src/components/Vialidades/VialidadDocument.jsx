@@ -187,28 +187,24 @@ export const VialidadDocument = ({ data, llave, qrUrl, precio = 3.43, firmaAlcal
     .replace("{{llave_unica}}", llave || '&nbsp;')
     .replace("{{qr_code}}", qrUrl || '')
     .replace("{{verification_data}}", targetUrl)
-    .replace("{{logo_card}}", "/logo_card_frontal.png");
+    .replace("{{logo_card}}", "/static/logo_card_frontal.png");
 
-  const styleMatch = rendered.match(/<style>([\s\S]*?)<\/style>/i);
-  const bodyContentMatch = rendered.match(/<body>([\s\S]*?)<\/body>/i);
-  let finalHtml = '';
-  if (styleMatch) {
-    let css = styleMatch[1];
-    css = css.replace(/body\s*\{/gi, '#print-area {');
-    finalHtml += `<style>${css}</style>`;
-  }
-  if (bodyContentMatch && bodyContentMatch[1]) {
-    finalHtml += bodyContentMatch[1];
-  } else {
-    finalHtml = rendered;
-  }
+  // Inyectar <base href> para que el iframe resuelva /static/ correctamente desde el backend
+  const renderedWithBase = rendered.replace('<head>', `<head><base href="${backendBaseUrl}/">`);
 
   return (
-    <div
+    <iframe
+      srcDoc={renderedWithBase}
+      title="Documento de Vialidad"
       id="print-area"
-      className="select-text shadow-xl print:shadow-none rounded-xl overflow-hidden"
-      style={{ contentVisibility: 'auto' }}
-      dangerouslySetInnerHTML={{ __html: finalHtml }}
+      scrolling="no"
+      style={{
+        width: '21cm',
+        height: '25cm',
+        border: 'none',
+        borderRadius: '0.75rem',
+        boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)'
+      }}
     />
   );
 };
