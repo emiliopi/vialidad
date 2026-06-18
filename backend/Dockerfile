@@ -4,7 +4,8 @@ FROM python:3.11-slim as builder
 WORKDIR /app
 
 # Instalar dependencias necesarias para compilar drivers (como pyodbc y dependencias de sistema si aplican)
-RUN apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends \
+RUN (sed -i 's/http:/https:/g' /etc/apt/sources.list.d/debian.sources || sed -i 's/http:/https:/g' /etc/apt/sources.list) \
+    && apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends \
     build-essential \
     unixodbc-dev \
     curl \
@@ -22,7 +23,8 @@ FROM python:3.11-slim as runner
 WORKDIR /app
 
 # Instalar MS ODBC SQL Server driver, dependencias de ejecución de ODBC, Chromium Headless y libmagic
-RUN apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends \
+RUN (sed -i 's/http:/https:/g' /etc/apt/sources.list.d/debian.sources || sed -i 's/http:/https:/g' /etc/apt/sources.list) \
+    && apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends \
     unixodbc \
     curl \
     gnupg \
