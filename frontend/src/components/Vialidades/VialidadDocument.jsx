@@ -173,7 +173,6 @@ export const VialidadDocument = ({ data, llave, qrUrl, precio = 3.43, firmaAlcal
   const fSecretario = firmaSecretarioUrl ? `${backendBaseUrl}${firmaSecretarioUrl}` : "/firma_secretario.png";
 
   let rendered = templateHtml
-    .replace("static/tailwind.min.css", `${backendBaseUrl}/static/tailwind.min.css`)
     .replace("{{watermark_html}}", watermarkHtml)
     .replace("{{distrito}}", data.distrito || '&nbsp;')
     .replace("{{numero_recibo}}", data.numeroRecibo || '&nbsp;')
@@ -188,21 +187,28 @@ export const VialidadDocument = ({ data, llave, qrUrl, precio = 3.43, firmaAlcal
     .replace("{{llave_unica}}", llave || '&nbsp;')
     .replace("{{qr_code}}", qrUrl || '')
     .replace("{{verification_data}}", targetUrl)
-    .replace("{{logo_card}}", `${backendBaseUrl}/static/logo_card_frontal.png`);
+    .replace("{{logo_card}}", "/logo_card_frontal.png");
+
+  const styleMatch = rendered.match(/<style>([\s\S]*?)<\/style>/i);
+  const bodyContentMatch = rendered.match(/<body>([\s\S]*?)<\/body>/i);
+  let finalHtml = '';
+  if (styleMatch) {
+    let css = styleMatch[1];
+    css = css.replace(/body\s*\{/gi, '#print-area {');
+    finalHtml += `<style>${css}</style>`;
+  }
+  if (bodyContentMatch && bodyContentMatch[1]) {
+    finalHtml += bodyContentMatch[1];
+  } else {
+    finalHtml = rendered;
+  }
 
   return (
-    <iframe
-      srcDoc={rendered}
-      title="Documento de Vialidad"
+    <div
       id="print-area"
-      scrolling="no"
-      style={{
-        width: '21cm',
-        height: '25cm',
-        border: 'none',
-        borderRadius: '0.75rem',
-        boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)'
-      }}
+      className="select-text shadow-xl print:shadow-none rounded-xl overflow-hidden"
+      style={{ contentVisibility: 'auto' }}
+      dangerouslySetInnerHTML={{ __html: finalHtml }}
     />
   );
 };
