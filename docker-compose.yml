@@ -20,6 +20,10 @@ services:
       - REFRESH_TOKEN_EXPIRE_DAYS=${REFRESH_TOKEN_EXPIRE_DAYS:-7}
       - MAX_LOGIN_ATTEMPTS=${MAX_LOGIN_ATTEMPTS:-5}
       - LOCKOUT_DURATION_MINUTES=${LOCKOUT_DURATION_MINUTES:-5}
+    volumes:
+      # Montar Chromium del host (Rocky Linux / EPEL) para generación de PDFs
+      - /usr/bin/chromium-browser:/usr/bin/chromium-browser:ro
+      - /usr/lib64/chromium-browser:/usr/lib64/chromium-browser:ro
     networks:
       - vialidad-net
 
