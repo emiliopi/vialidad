@@ -24,6 +24,8 @@ services:
       # Montar Chromium del host (Rocky Linux / EPEL) para generación de PDFs
       - /usr/bin/chromium-browser:/usr/bin/chromium-browser:ro
       - /usr/lib64/chromium-browser:/usr/lib64/chromium-browser:ro
+      # Montar archivos estáticos para no requerir rebuild en cambios de plantillas o logos
+      - ./backend/static:/app/static
     networks:
       - vialidad-net
 
