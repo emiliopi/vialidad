@@ -173,6 +173,7 @@ export const VialidadDocument = ({ data, llave, qrUrl, precio = 3.43, firmaAlcal
   const fSecretario = firmaSecretarioUrl ? `${backendBaseUrl}${firmaSecretarioUrl}` : "/firma_secretario.png";
 
   let rendered = templateHtml
+    .replace("static/tailwind.min.css", `${backendBaseUrl}/static/tailwind.min.css`)
     .replace("{{watermark_html}}", watermarkHtml)
     .replace("{{distrito}}", data.distrito || '&nbsp;')
     .replace("{{numero_recibo}}", data.numeroRecibo || '&nbsp;')
@@ -187,14 +188,11 @@ export const VialidadDocument = ({ data, llave, qrUrl, precio = 3.43, firmaAlcal
     .replace("{{llave_unica}}", llave || '&nbsp;')
     .replace("{{qr_code}}", qrUrl || '')
     .replace("{{verification_data}}", targetUrl)
-    .replace("{{logo_card}}", "static/logo_card_frontal.png");
-
-  // Inyectar <base href> para que el iframe resuelva /static/ correctamente desde el backend
-  const renderedWithBase = rendered.replace('<head>', `<head><base href="${backendBaseUrl}/">`);
+    .replace("{{logo_card}}", `${backendBaseUrl}/static/logo_card_frontal.png`);
 
   return (
     <iframe
-      srcDoc={renderedWithBase}
+      srcDoc={rendered}
       title="Documento de Vialidad"
       id="print-area"
       scrolling="no"
