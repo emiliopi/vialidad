@@ -60,6 +60,26 @@ def init_db() -> None:
                     END
                 """))
             conn.commit()
+
+            # Verificar y agregar columnas nuevas a CONFIGURACION_VIALIDAD si no existen
+            for col_name, col_type in [
+                ("logo_card_url", "VARCHAR(255) NULL"),
+                ("firma_alcalde_height", "VARCHAR(50) NULL"),
+                ("firma_alcalde_top", "VARCHAR(50) NULL"),
+                ("firma_secretario_height", "VARCHAR(50) NULL"),
+                ("firma_secretario_top", "VARCHAR(50) NULL")
+            ]:
+                conn.execute(text(f"""
+                    IF NOT EXISTS (
+                        SELECT * FROM sys.columns 
+                        WHERE object_id = OBJECT_ID('CONFIGURACION_VIALIDAD') 
+                        AND name = '{col_name}'
+                    )
+                    BEGIN
+                        ALTER TABLE CONFIGURACION_VIALIDAD ADD {col_name} {col_type};
+                    END
+                """))
+            conn.commit()
             
         logger.info("Base de datos inicializada correctamente.")
         

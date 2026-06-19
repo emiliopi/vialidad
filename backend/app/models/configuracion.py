@@ -14,6 +14,11 @@ class ConfiguracionVialidad(Base):
     precio_vialidad: Mapped[float] = mapped_column(Numeric(10, 2), default=3.43, nullable=False)
     firma_alcalde_url: Mapped[str] = mapped_column(String(255), nullable=True)
     firma_secretario_url: Mapped[str] = mapped_column(String(255), nullable=True)
+    logo_card_url: Mapped[str] = mapped_column(String(255), nullable=True)
+    firma_alcalde_height: Mapped[str] = mapped_column(String(50), nullable=True, default="5rem")
+    firma_alcalde_top: Mapped[str] = mapped_column(String(50), nullable=True, default="-2.5rem")
+    firma_secretario_height: Mapped[str] = mapped_column(String(50), nullable=True, default="5rem")
+    firma_secretario_top: Mapped[str] = mapped_column(String(50), nullable=True, default="-2.5rem")
 
     # Campos de Auditoría
     codigo_usuario_creacion: Mapped[int] = mapped_column(BigInteger, ForeignKey("USUARIOS.codigo_usuario"), nullable=True)

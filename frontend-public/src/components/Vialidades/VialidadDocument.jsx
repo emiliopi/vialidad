@@ -102,7 +102,19 @@ const formatFechaEspanol = (dateStr) => {
   return dateStr;
 };
 
-export const VialidadDocument = ({ data, llave, qrUrl, precio = 3.43, firmaAlcaldeUrl = '', firmaSecretarioUrl = '' }) => {
+export const VialidadDocument = ({ 
+  data, 
+  llave, 
+  qrUrl, 
+  precio = 3.43, 
+  firmaAlcaldeUrl = '', 
+  firmaSecretarioUrl = '', 
+  logoCardUrl = '',
+  firmaAlcaldeHeight = '5rem',
+  firmaAlcaldeTop = '-2.5rem',
+  firmaSecretarioHeight = '5rem',
+  firmaSecretarioTop = '-2.5rem'
+}) => {
   const currentYear = new Date().getFullYear();
   const apiVal = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
   const backendBaseUrl = apiVal.endsWith('/api') ? apiVal.substring(0, apiVal.length - 4) : apiVal;
@@ -171,6 +183,7 @@ export const VialidadDocument = ({ data, llave, qrUrl, precio = 3.43, firmaAlcal
 
   const fAlcalde = firmaAlcaldeUrl ? `${backendBaseUrl}${firmaAlcaldeUrl}` : "/firma_alcalde.png";
   const fSecretario = firmaSecretarioUrl ? `${backendBaseUrl}${firmaSecretarioUrl}` : "/firma_secretario.png";
+  const lCard = logoCardUrl ? `${backendBaseUrl}${logoCardUrl}` : "/logo_card_frontal.png";
 
   let rendered = templateHtml
     .replace("{{watermark_html}}", watermarkHtml)
@@ -184,10 +197,14 @@ export const VialidadDocument = ({ data, llave, qrUrl, precio = 3.43, firmaAlcal
     .replace("{{fecha_expiracion}}", fechaExp)
     .replace("{{firma_alcalde}}", fAlcalde)
     .replace("{{firma_secretario}}", fSecretario)
+    .replace("{{firma_alcalde_height}}", firmaAlcaldeHeight)
+    .replace("{{firma_alcalde_top}}", firmaAlcaldeTop)
+    .replace("{{firma_secretario_height}}", firmaSecretarioHeight)
+    .replace("{{firma_secretario_top}}", firmaSecretarioTop)
     .replace("{{llave_unica}}", llave || '&nbsp;')
     .replace("{{qr_code}}", qrUrl || '')
     .replace("{{verification_data}}", targetUrl)
-    .replace("{{logo_card}}", "/logo_card_frontal.png");
+    .replace("{{logo_card}}", lCard);
 
   const styleMatch = rendered.match(/<style>([\s\S]*?)<\/style>/i);
   const bodyContentMatch = rendered.match(/<body>([\s\S]*?)<\/body>/i);

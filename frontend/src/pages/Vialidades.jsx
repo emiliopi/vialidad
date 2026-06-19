@@ -66,6 +66,11 @@ export const Vialidades = () => {
   const [configPrecio, setConfigPrecio] = useState(3.43);
   const [configAlcaldeFirma, setConfigAlcaldeFirma] = useState('');
   const [configSecretarioFirma, setConfigSecretarioFirma] = useState('');
+  const [configLogoCard, setConfigLogoCard] = useState('');
+  const [configFirmaAlcaldeHeight, setConfigFirmaAlcaldeHeight] = useState('5rem');
+  const [configFirmaAlcaldeTop, setConfigFirmaAlcaldeTop] = useState('-2.5rem');
+  const [configFirmaSecretarioHeight, setConfigFirmaSecretarioHeight] = useState('5rem');
+  const [configFirmaSecretarioTop, setConfigFirmaSecretarioTop] = useState('-2.5rem');
   const [configUrlVerificador, setConfigUrlVerificador] = useState(window.location.origin);
 
   // Estados para la Previsualización de un Registro Existente
@@ -164,6 +169,11 @@ export const Vialidades = () => {
       setConfigPrecio(config.precio_vialidad);
       setConfigAlcaldeFirma(config.firma_alcalde_url || '');
       setConfigSecretarioFirma(config.firma_secretario_url || '');
+      setConfigLogoCard(config.logo_card_url || '');
+      setConfigFirmaAlcaldeHeight(config.firma_alcalde_height || '5rem');
+      setConfigFirmaAlcaldeTop(config.firma_alcalde_top || '-2.5rem');
+      setConfigFirmaSecretarioHeight(config.firma_secretario_height || '5rem');
+      setConfigFirmaSecretarioTop(config.firma_secretario_top || '-2.5rem');
       if (config.url_verificador) {
         setConfigUrlVerificador(config.url_verificador);
       }
@@ -226,7 +236,7 @@ export const Vialidades = () => {
     const printSecretario = vialidadObj.firma_secretario_url || configSecretarioFirma;
 
     const templateHtml = await getTemplateContent();
-    const htmlContent = getVialidadPrintTemplate(templateHtml, docData, vialidadObj.llave_unica, qrUrlExisting, vialidadObj.con_marca_agua, printPrecio, printAlcalde, printSecretario);
+    const htmlContent = getVialidadPrintTemplate(templateHtml, docData, vialidadObj.llave_unica, qrUrlExisting, vialidadObj.con_marca_agua, printPrecio, printAlcalde, printSecretario, configLogoCard, configFirmaAlcaldeHeight, configFirmaAlcaldeTop, configFirmaSecretarioHeight, configFirmaSecretarioTop);
     
     const doc = iframe.contentDocument || iframe.contentWindow.document;
     doc.open();
@@ -286,7 +296,12 @@ export const Vialidades = () => {
         loteItems[0].con_marca_agua,
         loteItems[0].precio_vialidad !== undefined && loteItems[0].precio_vialidad !== null ? loteItems[0].precio_vialidad : configPrecio,
         loteItems[0].firma_alcalde_url || configAlcaldeFirma,
-        loteItems[0].firma_secretario_url || configSecretarioFirma
+        loteItems[0].firma_secretario_url || configSecretarioFirma,
+        configLogoCard,
+        configFirmaAlcaldeHeight,
+        configFirmaAlcaldeTop,
+        configFirmaSecretarioHeight,
+        configFirmaSecretarioTop
       );
 
       const parser = new DOMParser();
@@ -321,7 +336,12 @@ export const Vialidades = () => {
           v.con_marca_agua,
           printPrecio,
           printAlcalde,
-          printSecretario
+          printSecretario,
+          configLogoCard,
+          configFirmaAlcaldeHeight,
+          configFirmaAlcaldeTop,
+          configFirmaSecretarioHeight,
+          configFirmaSecretarioTop
         );
 
         const doc = parser.parseFromString(html, 'text/html');
@@ -457,7 +477,12 @@ export const Vialidades = () => {
         savedVialidad.con_marca_agua, 
         configPrecio, 
         configAlcaldeFirma, 
-        configSecretarioFirma
+        configSecretarioFirma,
+        configLogoCard,
+        configFirmaAlcaldeHeight,
+        configFirmaAlcaldeTop,
+        configFirmaSecretarioHeight,
+        configFirmaSecretarioTop
       );
       
       // Escribir el HTML al documento del iframe
@@ -567,7 +592,7 @@ export const Vialidades = () => {
 
             {/* Área de Previsualización (Derecha) */}
             <div className="lg:col-span-8 flex justify-center bg-slate-100 dark:bg-slate-950 p-4 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-auto">
-              <VialidadDocument data={data} llave={llave} qrUrl={qrUrl} precio={configPrecio} firmaAlcaldeUrl={configAlcaldeFirma} firmaSecretarioUrl={configSecretarioFirma} />
+              <VialidadDocument data={data} llave={llave} qrUrl={qrUrl} precio={configPrecio} firmaAlcaldeUrl={configAlcaldeFirma} firmaSecretarioUrl={configSecretarioFirma} logoCardUrl={configLogoCard} firmaAlcaldeHeight={configFirmaAlcaldeHeight} firmaAlcaldeTop={configFirmaAlcaldeTop} firmaSecretarioHeight={configFirmaSecretarioHeight} firmaSecretarioTop={configFirmaSecretarioTop} />
             </div>
           </div>
         ) : (
@@ -884,6 +909,11 @@ export const Vialidades = () => {
                   precio={selectedVialidad.precio_vialidad !== undefined && selectedVialidad.precio_vialidad !== null ? selectedVialidad.precio_vialidad : configPrecio}
                   firmaAlcaldeUrl={selectedVialidad.firma_alcalde_url || configAlcaldeFirma}
                   firmaSecretarioUrl={selectedVialidad.firma_secretario_url || configSecretarioFirma}
+                  logoCardUrl={configLogoCard}
+                  firmaAlcaldeHeight={configFirmaAlcaldeHeight}
+                  firmaAlcaldeTop={configFirmaAlcaldeTop}
+                  firmaSecretarioHeight={configFirmaSecretarioHeight}
+                  firmaSecretarioTop={configFirmaSecretarioTop}
                 />
               </div>
             </div>

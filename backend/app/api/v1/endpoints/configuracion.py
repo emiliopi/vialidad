@@ -65,6 +65,15 @@ def update_configuracion(
     config = obtener_o_inicializar_config(db)
     try:
         config.precio_vialidad = config_in.precio_vialidad
+        if config_in.firma_alcalde_height is not None:
+            config.firma_alcalde_height = config_in.firma_alcalde_height
+        if config_in.firma_alcalde_top is not None:
+            config.firma_alcalde_top = config_in.firma_alcalde_top
+        if config_in.firma_secretario_height is not None:
+            config.firma_secretario_height = config_in.firma_secretario_height
+        if config_in.firma_secretario_top is not None:
+            config.firma_secretario_top = config_in.firma_secretario_top
+            
         config.codigo_usuario_modificacion = current_user.codigo_usuario
         db.commit()
         db.refresh(config)
@@ -132,4 +141,46 @@ def cargar_firma(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error interno al guardar el archivo en el servidor."
+        )
+
+@router.post("/cargar-logo", response_model=ConfiguracionResponse)
+def cargar_logo(
+    file: UploadFile = File(...),
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """
+    Carga el archivo de logo de la tarjeta.
+    Guarda el archivo en el directorio estático local del backend y actualiza la URL en base de datos.
+    """
+    extension = os.path.splitext(file.filename)[1].lower()
+    if extension not in [".png", ".jpg", ".jpeg", ".svg"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Formato de archivo no válido. Solo se permiten imágenes (PNG, JPG, JPEG, SVG)."
+        )
+
+    config = obtener_o_inicializar_config(db)
+
+    import uuid
+    filename = f"logo_card_{uuid.uuid4().hex}{extension}"
+    file_path = os.path.join(STATIC_DIR, filename)
+
+    try:
+        # Guardar archivo localmente
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        file_url = f"/static/{filename}"
+        config.logo_card_url = file_url
+        config.codigo_usuario_modificacion = current_user.codigo_usuario
+        db.commit()
+        db.refresh(config)
+        return config
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error al cargar archivo de logo: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al guardar el archivo de logo en el servidor."
         )

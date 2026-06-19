@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { vialidadService } from '../api/vialidadService';
+import { configuracionService } from '../api/configuracionService';
 import { VialidadDocument } from '../components/Vialidades/VialidadDocument';
 import { Button, Input } from '../components/Common';
 
@@ -20,10 +21,30 @@ export const VerificarVialidad = () => {
   const [loading, setLoading] = useState(hasInitialParams);
   const [result, setResult] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [configLogoCard, setConfigLogoCard] = useState('');
+  const [configFirmaAlcaldeHeight, setConfigFirmaAlcaldeHeight] = useState('5rem');
+  const [configFirmaAlcaldeTop, setConfigFirmaAlcaldeTop] = useState('-2.5rem');
+  const [configFirmaSecretarioHeight, setConfigFirmaSecretarioHeight] = useState('5rem');
+  const [configFirmaSecretarioTop, setConfigFirmaSecretarioTop] = useState('-2.5rem');
   const hasCalled = useRef(false);
 
   useEffect(() => {
     document.title = 'Vialidad Validador';
+    
+    // Cargar parámetros dinámicos de la configuración
+    const loadConfig = async () => {
+      try {
+        const config = await configuracionService.getConfiguracion();
+        setConfigLogoCard(config.logo_card_url || '');
+        setConfigFirmaAlcaldeHeight(config.firma_alcalde_height || '5rem');
+        setConfigFirmaAlcaldeTop(config.firma_alcalde_top || '-2.5rem');
+        setConfigFirmaSecretarioHeight(config.firma_secretario_height || '5rem');
+        setConfigFirmaSecretarioTop(config.firma_secretario_top || '-2.5rem');
+      } catch (err) {
+        console.error('Error al obtener la configuración:', err);
+      }
+    };
+    loadConfig();
   }, []);
 
   const performVerification = async (targetLlave, targetRecibo) => {
@@ -198,6 +219,11 @@ export const VerificarVialidad = () => {
                 precio={result.datos.precio_vialidad}
                 firmaAlcaldeUrl={result.datos.firma_alcalde_url}
                 firmaSecretarioUrl={result.datos.firma_secretario_url}
+                logoCardUrl={configLogoCard}
+                firmaAlcaldeHeight={configFirmaAlcaldeHeight}
+                firmaAlcaldeTop={configFirmaAlcaldeTop}
+                firmaSecretarioHeight={configFirmaSecretarioHeight}
+                firmaSecretarioTop={configFirmaSecretarioTop}
               />
             </div>
             

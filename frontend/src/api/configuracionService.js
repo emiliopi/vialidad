@@ -13,10 +13,10 @@ export const configuracionService = {
   },
 
   /**
-   * Actualiza el precio global de la vialidad.
+   * Actualiza la configuración global (precio y dimensiones).
    */
-  updatePrecio: async (precio) => {
-    const res = await api.put('/configuracion/', { precio_vialidad: precio });
+  updateConfiguracion: async (payload) => {
+    const res = await api.put('/configuracion/', payload);
     return res.data;
   },
 
@@ -26,6 +26,18 @@ export const configuracionService = {
    */
   uploadFirma: async (tipo, formData) => {
     const res = await api.post(`/configuracion/cargar-firma/${tipo}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return res.data;
+  },
+
+  /**
+   * Carga el archivo de logo para la tarjeta.
+   */
+  uploadLogo: async (formData) => {
+    const res = await api.post('/configuracion/cargar-logo', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }

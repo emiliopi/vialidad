@@ -235,9 +235,38 @@ def generar_pdf_vialidad(vialidad: Vialidad, url_verificador: str = None) -> io.
     Genera la boleta de vialidad oficial renderizando la plantilla HTML literal de impresión
     de React utilizando un navegador Headless compatible con soporte completo de tiempo virtual.
     """
-    # 1. Definir rutas absolutas para imágenes de logos
+    # 1. Definir rutas absolutas para imágenes de logos e intentar cargar el logo de tarjeta dinámico
     logo_path = (STATIC_DIR / "logo.png").as_uri()
-    logo_card_path = (STATIC_DIR / "logo_card_frontal.png").as_uri()
+    
+    logo_card_path = None
+    firma_alcalde_height = "5rem"
+    firma_alcalde_top = "-2.5rem"
+    firma_secretario_height = "5rem"
+    firma_secretario_top = "-2.5rem"
+    
+    from app.core.database import SessionLocal
+    from app.models.configuracion import ConfiguracionVialidad
+    db_session = SessionLocal()
+    try:
+        config = db_session.query(ConfiguracionVialidad).filter(ConfiguracionVialidad.id == 1).first()
+        if config:
+            if config.logo_card_url:
+                logo_card_path = resolver_ruta_archivo(config.logo_card_url)
+            if config.firma_alcalde_height:
+                firma_alcalde_height = config.firma_alcalde_height
+            if config.firma_alcalde_top:
+                firma_alcalde_top = config.firma_alcalde_top
+            if config.firma_secretario_height:
+                firma_secretario_height = config.firma_secretario_height
+            if config.firma_secretario_top:
+                firma_secretario_top = config.firma_secretario_top
+    except Exception:
+        pass
+    finally:
+        db_session.close()
+
+    if not logo_card_path:
+        logo_card_path = (STATIC_DIR / "logo_card_frontal.png").as_uri()
     
     # 2. Resolver firmas dinámicas
     firma_alcalde_url = resolver_ruta_archivo(vialidad.firma_alcalde_url)
@@ -304,6 +333,10 @@ def generar_pdf_vialidad(vialidad: Vialidad, url_verificador: str = None) -> io.
     html_content = html_content.replace("{{fecha_expiracion}}", fecha_exp)
     html_content = html_content.replace("{{firma_alcalde}}", firma_alcalde_base64)
     html_content = html_content.replace("{{firma_secretario}}", firma_secretario_base64)
+    html_content = html_content.replace("{{firma_alcalde_height}}", firma_alcalde_height)
+    html_content = html_content.replace("{{firma_alcalde_top}}", firma_alcalde_top)
+    html_content = html_content.replace("{{firma_secretario_height}}", firma_secretario_height)
+    html_content = html_content.replace("{{firma_secretario_top}}", firma_secretario_top)
     html_content = html_content.replace("{{llave_unica}}", str(vialidad.llave_unica))
     html_content = html_content.replace("{{qr_code}}", qr_base64)
     html_content = html_content.replace("{{verification_data}}", verification_data)

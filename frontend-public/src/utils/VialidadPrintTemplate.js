@@ -92,7 +92,7 @@ const formatFechaEspanol = (dateStr) => {
     console.error(e);
   }
   return dateStr;
-};export const getVialidadPrintTemplate = (templateHtml, data, llave, qrUrl, conMarcaAgua = true, precio = 3.43, firmaAlcaldeUrl = '', firmaSecretarioUrl = '') => {
+};export const getVialidadPrintTemplate = (templateHtml, data, llave, qrUrl, conMarcaAgua = true, precio = 3.43, firmaAlcaldeUrl = '', firmaSecretarioUrl = '', logoCardUrl = '', firmaAlcaldeHeight = '5rem', firmaAlcaldeTop = '-2.5rem', firmaSecretarioHeight = '5rem', firmaSecretarioTop = '-2.5rem') => {
   if (!templateHtml) {
     console.error("No templateHtml provided to getVialidadPrintTemplate");
     return "";
@@ -127,6 +127,7 @@ const formatFechaEspanol = (dateStr) => {
   
   const fAlcalde = firmaAlcaldeUrl ? `${backendBaseUrl}${firmaAlcaldeUrl}` : "/firma_alcalde.png";
   const fSecretario = firmaSecretarioUrl ? `${backendBaseUrl}${firmaSecretarioUrl}` : "/firma_secretario.png";
+  const lCard = logoCardUrl ? `${backendBaseUrl}${logoCardUrl}` : "/logo_card_frontal.png";
 
   return templateHtml
     .replace("{{watermark_html}}", watermarkHtml)
@@ -140,8 +141,12 @@ const formatFechaEspanol = (dateStr) => {
     .replace("{{fecha_expiracion}}", fechaExp)
     .replace("{{firma_alcalde}}", fAlcalde)
     .replace("{{firma_secretario}}", fSecretario)
+    .replace("{{firma_alcalde_height}}", firmaAlcaldeHeight)
+    .replace("{{firma_alcalde_top}}", firmaAlcaldeTop)
+    .replace("{{firma_secretario_height}}", firmaSecretarioHeight)
+    .replace("{{firma_secretario_top}}", firmaSecretarioTop)
     .replace("{{llave_unica}}", llave || '&nbsp;')
     .replace("{{qr_code}}", qrUrl || '')
     .replace("{{verification_data}}", targetUrl)
-    .replace("{{logo_card}}", "/logo_card_frontal.png");
+    .replace("{{logo_card}}", lCard);
 };
