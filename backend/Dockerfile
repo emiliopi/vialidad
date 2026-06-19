@@ -28,14 +28,18 @@ FROM python:3.11-bullseye AS runner
 
 WORKDIR /app
 
-# Instalar ODBC runtime, libmagic y Chromium
+# Instalar ODBC runtime, libmagic y Google Chrome (desde el CDN rápido de Google)
 RUN apt-get -o Acquire::ForceIPv4=true update \
-    && apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends \
+    && apt-get -o Acquire::ForceIPv4=true -y install --no-install-recommends \
     unixodbc \
     libmagic1 \
     curl \
     gnupg \
-    chromium \
+    wget \
+    && curl -sSL https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
+    && apt-get -o Acquire::ForceIPv4=true update \
+    && apt-get -o Acquire::ForceIPv4=true -y install --no-install-recommends google-chrome-stable \
     && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
     && curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list \
     && apt-get -o Acquire::ForceIPv4=true update \
