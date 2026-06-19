@@ -310,10 +310,10 @@ def generar_pdf_vialidad(vialidad: Vialidad, url_verificador: str = None) -> io.
     html_content = html_content.replace("{{logo_card}}", logo_card_base64)
 
     # 7. Crear archivos temporales
-    html_fd, html_temp_path = tempfile.mkstemp(suffix=".html", dir=str(STATIC_DIR))
+    html_fd, html_temp_path = tempfile.mkstemp(suffix=".html")
     os.close(html_fd)
     
-    pdf_fd, pdf_temp_path = tempfile.mkstemp(suffix=".pdf", dir=str(STATIC_DIR))
+    pdf_fd, pdf_temp_path = tempfile.mkstemp(suffix=".pdf")
     os.close(pdf_fd)
     
     try:
