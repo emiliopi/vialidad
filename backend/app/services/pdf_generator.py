@@ -236,17 +236,17 @@ def generar_pdf_vialidad(vialidad: Vialidad, url_verificador: str = None) -> io.
     de React utilizando un navegador Headless compatible con soporte completo de tiempo virtual.
     """
     # 1. Definir rutas absolutas para imágenes de logos
-    logo_path = (PUBLIC_DIR / "logo.png").as_uri()
-    logo_card_path = (PUBLIC_DIR / "logo_card_frontal.png").as_uri()
+    logo_path = (STATIC_DIR / "logo.png").as_uri()
+    logo_card_path = (STATIC_DIR / "logo_card_frontal.png").as_uri()
     
     # 2. Resolver firmas dinámicas
     firma_alcalde_url = resolver_ruta_archivo(vialidad.firma_alcalde_url)
     if not firma_alcalde_url:
-        firma_alcalde_url = (PUBLIC_DIR / "firma_alcalde.png").as_uri()
+        firma_alcalde_url = (STATIC_DIR / "firma_alcalde.png").as_uri()
         
     firma_secretario_url = resolver_ruta_archivo(vialidad.firma_secretario_url)
     if not firma_secretario_url:
-        firma_secretario_url = (PUBLIC_DIR / "firma_secretario.png").as_uri()
+        firma_secretario_url = (STATIC_DIR / "firma_secretario.png").as_uri()
 
     # 2.5 Resolver Tailwind CSS
     tailwind_css = TAILWIND_CSS_PATH.as_uri() if TAILWIND_CSS_PATH.exists() else "https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
