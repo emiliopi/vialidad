@@ -200,6 +200,10 @@ export const Vialidades = () => {
       }
     };
     loadFiltersData();
+
+    return () => {
+      sessionStorage.removeItem('vialidad_is_creating');
+    };
   }, []);
 
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
@@ -538,20 +542,20 @@ export const Vialidades = () => {
       <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-300">
         
         {/* Encabezado del Módulo */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5 print:hidden">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              Vialidades
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full gap-4 border-b border-slate-200 dark:border-slate-800 pb-5 print:hidden">
+          <div className="text-left w-full sm:w-auto">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 justify-start">
+              {isCreating ? 'Nueva Vialidad' : 'Vialidades'}
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 max-w-2xl text-left">
               {isCreating 
-                ? 'Ingresa los datos para confeccionar el documento en formato oficial de papel bond listo para imprimir.' 
+                ? 'Ingresa los datos para confeccionar el documento en formato oficial listo para imprimir.' 
                 : 'Listado y consulta de vialidades emitidas con visualización en verificador QR.'}
             </p>
           </div>
-          <div>
+          <div className="w-full sm:w-auto flex justify-start sm:justify-end">
             {isCreating ? (
-              <div className="flex gap-2">
+              <div className="flex gap-2 w-full sm:w-auto justify-start sm:justify-end">
                 <Button variant="outline" onClick={() => setIsCreating(false)} className="flex items-center gap-2 shadow-sm">
                   Regresar al Listado
                 </Button>
