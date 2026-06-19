@@ -28,13 +28,14 @@ FROM python:3.11-bullseye AS runner
 
 WORKDIR /app
 
-# Instalar ODBC runtime y libmagic (sin Chromium - se usa el del host via volumen)
+# Instalar ODBC runtime, libmagic y Chromium
 RUN apt-get -o Acquire::ForceIPv4=true update \
     && apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends \
     unixodbc \
     libmagic1 \
     curl \
     gnupg \
+    chromium \
     && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
     && curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list \
     && apt-get -o Acquire::ForceIPv4=true update \
