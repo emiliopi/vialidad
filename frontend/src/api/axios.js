@@ -42,8 +42,12 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Si recibimos 401 (No autorizado) y la petición no ha sido reintentada previamente
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Si recibimos 401 (No autorizado) y la petición no es la de inicio de sesión ni ha sido reintentada
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes('/auth/login')
+    ) {
       const currentToken = localStorage.getItem('token');
       const requestToken = originalRequest.headers.Authorization?.replace('Bearer ', '');
 
