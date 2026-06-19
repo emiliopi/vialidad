@@ -270,12 +270,31 @@ def get_vialidades(
         
         if search:
             search_filter = f"%{search}%"
-            query = query.filter(
+            date_condition = None
+            
+            # Intentar parsear formatos de fecha estándar
+            from datetime import datetime as dt, timedelta
+            for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%Y/%m/%d", "%d/%m/%Y"):
+                try:
+                    parsed_date = dt.strptime(search.strip(), fmt)
+                    start_date = parsed_date
+                    end_date = parsed_date + timedelta(days=1)
+                    date_condition = (Vialidad.fecha_emision >= start_date) & (Vialidad.fecha_emision < end_date)
+                    break
+                except ValueError:
+                    continue
+
+            base_conditions = (
                 (Vialidad.nombre.ilike(search_filter)) |
                 (Vialidad.numero_recibo.ilike(search_filter)) |
                 (Vialidad.llave_unica.ilike(search_filter)) |
                 (cast(Vialidad.fecha_emision, String).ilike(search_filter))
             )
+            
+            if date_condition is not None:
+                query = query.filter(base_conditions | date_condition)
+            else:
+                query = query.filter(base_conditions)
             
         if distrito:
             query = query.filter(Vialidad.distrito.ilike(distrito))
