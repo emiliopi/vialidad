@@ -131,7 +131,7 @@ export const Vialidades = () => {
     setLlave(`VIA-${YYYY}-${MM}${DD}${HH}${mm}${ss}`);
     setData({
       numeroRecibo: '',
-      distrito: 'SAN SALVADOR CENTRO',
+      distrito: '',
       solicitante: '',
       concepto: 'EMPLEADO',
       conMarcaAgua: true,
