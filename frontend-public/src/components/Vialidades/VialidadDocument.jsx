@@ -209,11 +209,18 @@ export const VialidadDocument = ({
   const styleMatch = rendered.match(/<style>([\s\S]*?)<\/style>/i);
   const bodyContentMatch = rendered.match(/<body>([\s\S]*?)<\/body>/i);
   let finalHtml = '';
+
   if (styleMatch) {
     let css = styleMatch[1];
     css = css.replace(/body\s*\{/gi, '#print-area {');
-    finalHtml += `<style>${css}</style>`;
+    let imports = '';
+    css = css.replace(/@import\s+url\([^)]+\);/gi, (match) => {
+      imports += match + '\n';
+      return '';
+    });
+    finalHtml += `<style>${imports}#print-area { ${css} }</style>`;
   }
+
   if (bodyContentMatch && bodyContentMatch[1]) {
     finalHtml += bodyContentMatch[1];
   } else {
